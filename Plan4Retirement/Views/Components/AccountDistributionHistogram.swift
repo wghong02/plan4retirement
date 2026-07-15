@@ -24,10 +24,11 @@ struct AccountDistributionHistogram: View {
                 ZStack {
                     canvas
                         .gesture(
-                            TapGesture().onEnded { location in
-                                let frame = CGRect(x: 0, y: 0, width: 300, height: height)
-                                updateSelectedBar(at: location, in: frame)
-                            }
+                            DragGesture()
+                                .onChanged { value in
+                                    let frame = CGRect(x: 0, y: 0, width: 300, height: height)
+                                    updateSelectedBar(at: value.location, in: frame)
+                                }
                         )
 
                     // Tooltip on bar selection
@@ -80,7 +81,7 @@ struct AccountDistributionHistogram: View {
                 context.stroke(gridPath, with: .color(.gray.opacity(0.2)), lineWidth: 0.5)
 
                 // Y axis label
-                var text = Text(labelValue)
+                let text = Text(labelValue)
                     .font(.caption2)
                     .foregroundColor(.gray)
                 context.draw(text, at: CGPoint(x: padding - 40, y: y), anchor: .center)
@@ -108,7 +109,7 @@ struct AccountDistributionHistogram: View {
                 )
 
                 // X axis label
-                var text = Text(key)
+                let text = Text(key)
                     .font(.caption2)
                     .foregroundColor(.gray)
                 context.draw(text, at: CGPoint(x: x + (barWidth - barWidth * 0.2) / 2, y: size.height - 15), anchor: .center)
@@ -214,7 +215,6 @@ struct AccountDistributionHistogram: View {
         let padding: CGFloat = 40
         let chartWidth = frame.width - (padding * 2)
         let barCount = distribution.count
-        let barWidth = chartWidth / CGFloat(barCount)
 
         let normalizedX = (location.x - padding) / chartWidth
         let barIndex = Int(normalizedX * CGFloat(barCount))

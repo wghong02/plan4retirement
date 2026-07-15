@@ -55,17 +55,12 @@ struct RetirementLineChart: View {
                 ZStack {
                     canvas
                         .gesture(
-                            SimultaneousGesture(
-                                TapGesture().onEnded { location in
+                            DragGesture()
+                                .onChanged { value in
                                     let frame = CGRect(x: 0, y: 0, width: 300, height: height)
-                                    touchLocation = location
-                                    updateSelectedIndex(at: location, in: frame)
-                                },
-                                MagnificationGesture()
-                                    .onChanged { scale in
-                                        zoomScale = scale
-                                    }
-                            )
+                                    touchLocation = value.location
+                                    updateSelectedIndex(at: value.location, in: frame)
+                                }
                         )
 
                     // Tooltip on touch
@@ -118,7 +113,7 @@ struct RetirementLineChart: View {
                 context.stroke(gridPath, with: .color(.gray.opacity(0.2)), lineWidth: 0.5)
 
                 // Y axis label
-                var text = Text(labelValue)
+                let text = Text(labelValue)
                     .font(.caption2)
                     .foregroundColor(.gray)
                 context.draw(text, at: CGPoint(x: padding - 40, y: y), anchor: .center)
@@ -146,7 +141,7 @@ struct RetirementLineChart: View {
                 let normalizedBalance = (point.balance - minBalance) / max(1, balanceRange)
                 let y = size.height - padding / 2 - normalizedBalance * chartHeight
 
-                var circle = Path(
+                let circle = Path(
                     ellipseIn: CGRect(x: x - 4, y: y - 4, width: 8, height: 8)
                 )
 
@@ -161,7 +156,7 @@ struct RetirementLineChart: View {
                     let x = padding + (CGFloat(index) / CGFloat(max(1, filteredData.count - 1))) * chartWidth
                     let label = formatXAxisLabel(point, mode: displayMode)
 
-                    var text = Text(label)
+                    let text = Text(label)
                         .font(.caption2)
                         .foregroundColor(.gray)
                     context.draw(text, at: CGPoint(x: x, y: size.height - 20), anchor: .center)
@@ -293,19 +288,26 @@ struct RetirementLineChart: View {
 }
 
 #Preview {
-    let sampleData = (0..<40).map { i in
-        ProjectionDataPoint(
-            year: i,
-            age: 30 + i,
-            balance: Double(50000 * (1 + i * 8 / 100)),
-            contribution: 10000,
-            growth: Double(50000 * i * 8 / 100)
-        )
-    }
-
+    let sampleData = generateSampleProjectionData()
     RetirementLineChart(
         dataPoints: sampleData,
         title: "Retirement Projection"
     )
     .padding()
+}
+
+private func generateSampleProjectionData() -> [ProjectionDataPoint] {
+    var data: [ProjectionDataPoint] = []
+    for i in 0..<40 {
+        let balance = Double(50000) * (1.0 + Double(i) * 0.08)
+        let growth = Double(50000) * Double(i) * 0.08
+        data.append(ProjectionDataPoint(
+            year: i,
+            age: 30 + i,
+            balance: balance,
+            contribution: 10000.0,
+            growth: growth
+        ))
+    }
+    return data
 }
