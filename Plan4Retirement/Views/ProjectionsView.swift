@@ -77,6 +77,8 @@ struct ProjectionsView: View {
             .navigationTitle("Projections")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear(perform: loadData)
+            .onReceive(settings.$maxYearsDisplayed) { _ in loadData() }
+            .onReceive(settings.$maxMonthsDisplayed) { _ in loadData() }
             .sheet(isPresented: $showSaveSnapshot) {
                 SaveSnapshotView(isPresented: $showSaveSnapshot) { snapshotName in
                     saveSnapshot(name: snapshotName)
@@ -345,7 +347,13 @@ struct ProjectionsView: View {
             let params = settings.getProjectionParameters(lifeEvents: lifeEvents)
 
             parameters = params
-            projection = calculator.calculateRetirementProjection(accounts: accounts, parameters: params)
+            // Project far enough to cover whichever display window is larger.
+            let horizonMonths = max(settings.maxYearsDisplayed * 12, settings.maxMonthsDisplayed)
+            projection = calculator.calculateRetirementProjection(
+                accounts: accounts,
+                parameters: params,
+                horizonMonths: horizonMonths
+            )
 
             // Set default selected snapshot
             if selectedSnapshotId == nil, let first = savedSnapshots.first {

@@ -5,9 +5,13 @@ class ProjectionCalculator {
     // MARK: - Main Projection Calculation
     /// Projects balances month by month across the full horizon. Yearly views are
     /// derived by sampling one point per year (see `RetirementLineChart`).
+    /// - Parameter horizonMonths: optional minimum number of months to project,
+    ///   so the graph can display the full window configured in Settings even
+    ///   when it extends past life expectancy.
     func calculateRetirementProjection(
         accounts: [Account],
-        parameters: ProjectionParameters
+        parameters: ProjectionParameters,
+        horizonMonths: Int? = nil
     ) -> (projectionDataPoints: [ProjectionDataPoint], projectedBalance: Double) {
 
         var dataPoints: [ProjectionDataPoint] = []
@@ -19,50 +23,63 @@ class ProjectionCalculator {
         let inflationRate = parameters.inflationRate / 100.0
         let contributionIncreaseRate = parameters.annualContributionIncreaseRate / 100.0
 
-        let totalMonths = max(0, parameters.lifeExpectancy - parameters.currentAge) * 12
+        let lifeHorizon = max(0, parameters.lifeExpectancy - parameters.currentAge) * 12
+        let totalMonths = max(lifeHorizon, horizonMonths ?? 0)
 
-        for month in 0...totalMonths {
-            let year = month / 12
-            let age = parameters.currentAge + year
-            let balanceBeforeGrowth = totalBalance
+        // Month 0 is the starting point: exactly the current balance, with no growth
+        // or contribution applied yet.
+        dataPoints.append(ProjectionDataPoint(
+            monthIndex: 0,
+            age: parameters.currentAge,
+            balance: totalBalance,
+            contribution: 0,
+            growth: 0
+        ))
 
-            // Investment growth
-            totalBalance *= (1 + monthlyGrowthRate)
-            let growth = balanceBeforeGrowth * monthlyGrowthRate
+        if totalMonths >= 1 {
+            for month in 1...totalMonths {
+                let year = month / 12
+                let age = parameters.currentAge + year
+                let balanceBeforeGrowth = totalBalance
 
-            // Cash flow: contribute (with annual raises) while working, draw down
-            // inflation-adjusted spending once retired.
-            var contribution = 0.0
-            if age < parameters.retirementAge {
-                let annualContribution = baseAnnualContribution * pow(1 + contributionIncreaseRate, Double(year))
-                contribution = annualContribution / 12.0
-                totalBalance += contribution
-            } else {
-                let annualSpending = parameters.annualSpendingInRetirement * pow(1 + inflationRate, Double(year))
-                totalBalance -= annualSpending / 12.0
-            }
+                // Investment growth
+                totalBalance *= (1 + monthlyGrowthRate)
+                let growth = balanceBeforeGrowth * monthlyGrowthRate
 
-            // One-off life events scheduled for this month
-            for event in lifeEvents(parameters.lifeEvents, inMonth: month) {
-                switch event.type {
-                case .housePurchase, .carPurchase, .majorExpense, .medicalExpense:
-                    totalBalance -= event.amount
-                case .inheritance:
-                    totalBalance += event.amount
-                case .other:
-                    break
+                // Cash flow: contribute (with annual raises) while working, draw down
+                // inflation-adjusted spending once retired.
+                var contribution = 0.0
+                if age < parameters.retirementAge {
+                    let annualContribution = baseAnnualContribution * pow(1 + contributionIncreaseRate, Double(year))
+                    contribution = annualContribution / 12.0
+                    totalBalance += contribution
+                } else {
+                    let annualSpending = parameters.annualSpendingInRetirement * pow(1 + inflationRate, Double(year))
+                    totalBalance -= annualSpending / 12.0
                 }
+
+                // One-off life events scheduled for this month
+                for event in lifeEvents(parameters.lifeEvents, inMonth: month) {
+                    switch event.type {
+                    case .housePurchase, .carPurchase, .majorExpense, .medicalExpense:
+                        totalBalance -= event.amount
+                    case .inheritance:
+                        totalBalance += event.amount
+                    case .other:
+                        break
+                    }
+                }
+
+                totalBalance = max(0, totalBalance)
+
+                dataPoints.append(ProjectionDataPoint(
+                    monthIndex: month,
+                    age: age,
+                    balance: totalBalance,
+                    contribution: contribution,
+                    growth: growth
+                ))
             }
-
-            totalBalance = max(0, totalBalance)
-
-            dataPoints.append(ProjectionDataPoint(
-                monthIndex: month,
-                age: age,
-                balance: totalBalance,
-                contribution: contribution,
-                growth: growth
-            ))
         }
 
         let projectedBalance = dataPoints.first { $0.age >= parameters.retirementAge }?.balance

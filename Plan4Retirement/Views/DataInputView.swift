@@ -6,9 +6,12 @@ struct DataInputView: View {
     @State private var showUpdateBalanceSheet = false
     @State private var selectedAccount: Account?
     @State private var accountHistory: [AccountHistory] = []
+    @State private var accountToDelete: Account?
+    @State private var showDeleteConfirmation = false
 
     private let accountService = AccountService()
     private let historyService = AccountHistoryService()
+    private let snapshotService = ProjectionSnapshotService()
 
     var body: some View {
         NavigationStack {
@@ -76,9 +79,10 @@ struct DataInputView: View {
                                 }
                             }
                             .padding(.vertical, 4)
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 Button(role: .destructive) {
-                                    deleteAccount(account)
+                                    accountToDelete = account
+                                    showDeleteConfirmation = true
                                 } label: {
                                     Label("Delete", systemImage: "trash")
                                 }
@@ -128,6 +132,14 @@ struct DataInputView: View {
                     }
                 }
             }
+            .alert("Delete Account?", isPresented: $showDeleteConfirmation, presenting: accountToDelete) { account in
+                Button("Delete", role: .destructive) {
+                    deleteAccount(account)
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: { account in
+                Text("This will permanently delete \"\(account.name)\", its balance history, and all saved projections. This action cannot be undone.")
+            }
         }
     }
 
@@ -141,7 +153,10 @@ struct DataInputView: View {
 
     private func deleteAccount(_ account: Account) {
         do {
+            // Removes the account and its balance history.
             try accountService.deleteAccount(by: account.id)
+            // Saved projections were computed from the old portfolio, so clear them.
+            try snapshotService.deleteAllSnapshots()
             loadAccounts()
         } catch {
             print("Error deleting account: \(error)")
