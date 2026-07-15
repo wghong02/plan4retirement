@@ -29,7 +29,7 @@ struct ContentView: View {
             // Tab 3: Dashboard
             DashboardView()
                 .tabItem {
-                    Label("Dashboard", systemImage: "chart.bar")
+                    Label("Dashboard", systemImage: "gauge")
                 }
                 .tag(TabItem.dashboard)
 

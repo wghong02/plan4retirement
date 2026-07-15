@@ -96,6 +96,8 @@ struct ProjectionsView: View {
                 RetirementLineChart(
                     dataPoints: projection.projectionDataPoints,
                     title: "Retirement Growth Projection",
+                    maxMonths: settings.maxMonthsDisplayed,
+                    maxYears: settings.maxYearsDisplayed,
                     displayMode: $chartMode
                 )
                 .cardStyle()
@@ -177,6 +179,8 @@ struct ProjectionsView: View {
                         title: "Projection: \(snapshot.name)",
                         startYear: Calendar.current.component(.year, from: snapshot.createdDate),
                         startMonth: Calendar.current.component(.month, from: snapshot.createdDate),
+                        maxMonths: settings.maxMonthsDisplayed,
+                        maxYears: settings.maxYearsDisplayed,
                         displayMode: $savedChartMode
                     )
                     .cardStyle()

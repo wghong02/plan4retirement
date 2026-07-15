@@ -26,9 +26,9 @@ struct DashboardView: View {
                         }
                         .frame(maxHeight: .infinity, alignment: .center)
                     } else {
-                        // Total Assets Card
+                        // Total Current Assets Card
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Total Assets")
+                            Text("Total Current Assets")
                                 .font(.subheadline)
                                 .foregroundColor(.gray)
 
@@ -49,10 +49,10 @@ struct DashboardView: View {
                                 Spacer()
 
                                 VStack(alignment: .trailing, spacing: 4) {
-                                    Text("Age: \(settings.currentAge)")
+                                    Text("Total Contributions")
                                         .font(.caption)
                                         .foregroundColor(.gray)
-                                    Text("Retirement: \(settings.retirementAge)")
+                                    Text(totalContributions.formatted(as: true))
                                         .font(.caption)
                                         .foregroundColor(.gray)
                                 }
@@ -70,17 +70,6 @@ struct DashboardView: View {
                                 Text(result.projectedBalance.formatted(as: true))
                                     .font(.title)
                                     .fontWeight(.bold)
-
-                                HStack {
-                                    Label(
-                                        "\(max(0, settings.lifeExpectancy - settings.currentAge)) years of projections",
-                                        systemImage: "calendar"
-                                    )
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
-
-                                    Spacer()
-                                }
                             }
                             .cardStyle()
                         }
@@ -137,9 +126,15 @@ struct DashboardView: View {
         accounts.totalBalance
     }
 
+    private var totalContributions: Double {
+        accounts.reduce(0) { $0 + $1.annualContribution }
+    }
+
+    /// ROI weighted by each account's most recent balance.
     private var averageROI: Double {
-        guard !accounts.isEmpty else { return 0 }
-        return accounts.reduce(0) { $0 + $1.expectedROI } / Double(accounts.count)
+        let total = accounts.totalBalance
+        guard total > 0 else { return 0 }
+        return accounts.reduce(0) { $0 + $1.expectedROI * ($1.currentBalance / total) }
     }
 
     private func loadData() {

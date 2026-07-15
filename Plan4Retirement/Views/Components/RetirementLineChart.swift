@@ -7,9 +7,10 @@ struct RetirementLineChart: View {
     /// saved snapshots pass the date they were created so their axis stays fixed.
     var startYear: Int = Calendar.current.component(.year, from: Date())
     var startMonth: Int = Calendar.current.component(.month, from: Date())
+    /// How many months / years to show in each display mode.
+    var maxMonths: Int = 60
+    var maxYears: Int = 100
     let height: CGFloat = 350
-
-    private let maxPoints = 60
 
     @State private var selectedIndex: Int? = nil
     @Binding var displayMode: DisplayMode
@@ -27,13 +28,12 @@ struct RetirementLineChart: View {
     var filteredData: [ProjectionDataPoint] {
         switch displayMode {
         case .monthly:
-            // Near-term detail: first maxPoints months as-is.
-            return Array(dataPoints.prefix(maxPoints))
+            // Near-term detail: first `maxMonths` months as-is.
+            return Array(dataPoints.prefix(maxMonths))
         case .yearly:
+            // One point per year, capped at `maxYears`.
             let yearly = dataPoints.filter { $0.monthIndex % 12 == 0 }
-            guard yearly.count > maxPoints else { return yearly }
-            let step = max(1, yearly.count / maxPoints)
-            return stride(from: 0, to: yearly.count, by: step).map { yearly[$0] }
+            return Array(yearly.prefix(maxYears))
         }
     }
 

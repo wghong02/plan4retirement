@@ -34,6 +34,14 @@ class SettingsService: ObservableObject {
         didSet { UserDefaults.standard.set(maxProjectionSnapshots, forKey: "maxProjectionSnapshots") }
     }
 
+    @Published var maxMonthsDisplayed: Int {
+        didSet { UserDefaults.standard.set(maxMonthsDisplayed, forKey: "maxMonthsDisplayed") }
+    }
+
+    @Published var maxYearsDisplayed: Int {
+        didSet { UserDefaults.standard.set(maxYearsDisplayed, forKey: "maxYearsDisplayed") }
+    }
+
     static let shared = SettingsService()
 
     init() {
@@ -47,6 +55,8 @@ class SettingsService: ObservableObject {
         self.lifeExpectancy = defaults.integer(forKey: "lifeExpectancy") == 0 ? 95 : defaults.integer(forKey: "lifeExpectancy")
         self.annualSpendingInRetirement = defaults.object(forKey: "annualSpendingInRetirement") as? Double ?? 50000
         self.maxProjectionSnapshots = defaults.integer(forKey: "maxProjectionSnapshots") == 0 ? 10 : defaults.integer(forKey: "maxProjectionSnapshots")
+        self.maxMonthsDisplayed = defaults.integer(forKey: "maxMonthsDisplayed") == 0 ? 60 : defaults.integer(forKey: "maxMonthsDisplayed")
+        self.maxYearsDisplayed = defaults.integer(forKey: "maxYearsDisplayed") == 0 ? 100 : defaults.integer(forKey: "maxYearsDisplayed")
     }
 
     func getProjectionParameters(lifeEvents: [LifeEvent] = []) -> ProjectionParameters {
@@ -71,5 +81,7 @@ class SettingsService: ObservableObject {
         lifeExpectancy = 95
         annualSpendingInRetirement = 50000
         maxProjectionSnapshots = 10
+        maxMonthsDisplayed = 60
+        maxYearsDisplayed = 100
     }
 }

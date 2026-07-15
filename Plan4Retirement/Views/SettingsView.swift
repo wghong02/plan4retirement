@@ -21,6 +21,22 @@ struct SettingsView: View {
                     )
                 }
 
+                Section("Graph Display") {
+                    Stepper(
+                        "Months Shown (Monthly): \(settings.maxMonthsDisplayed)",
+                        value: $settings.maxMonthsDisplayed,
+                        in: 10...200,
+                        step: 10
+                    )
+
+                    Stepper(
+                        "Years Shown (Yearly): \(settings.maxYearsDisplayed)",
+                        value: $settings.maxYearsDisplayed,
+                        in: 10...200,
+                        step: 10
+                    )
+                }
+
                 Section("Database") {
                     Button(action: { showResetConfirmation = true }) {
                         Label("Reset to Default Settings", systemImage: "arrow.counterclockwise")
