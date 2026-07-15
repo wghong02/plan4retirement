@@ -71,6 +71,7 @@ struct DashboardView: View {
                                     .font(.title)
                                     .fontWeight(.bold)
                             }
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             .cardStyle()
                         }
 

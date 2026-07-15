@@ -17,7 +17,7 @@ struct StepperField: View {
                 Spacer()
                 TextField("", text: $text)
                     .keyboardType(.numberPad)
-                    .multilineTextAlignment(.trailing)
+                    .multilineTextAlignment(.center)
                     .frame(width: 60)
                     .focused(focus)
                 Stepper("", onIncrement: { adjust(1) }, onDecrement: { adjust(-1) })
@@ -55,7 +55,7 @@ struct DecimalField: View {
                 Spacer()
                 TextField("", text: $text)
                     .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.trailing)
+                    .multilineTextAlignment(.center)
                     .frame(width: 110)
                     .focused(focus)
                 if let suffix {
