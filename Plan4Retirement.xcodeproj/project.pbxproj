@@ -6,8 +6,13 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		11100867300623CD00751B82 /* Plan4Retirement.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 11100865300623CC00751B82 /* Plan4Retirement.xcdatamodeld */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		111007DC3006162400751B82 /* Plan4Retirement.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Plan4Retirement.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		11100866300623CC00751B82 /* Plan4Retirement.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = Plan4Retirement.xcdatamodel; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -32,6 +37,7 @@
 		111007D33006162300751B82 = {
 			isa = PBXGroup;
 			children = (
+				11100865300623CC00751B82 /* Plan4Retirement.xcdatamodeld */,
 				111007DE3006162400751B82 /* Plan4Retirement */,
 				111007DD3006162400751B82 /* Products */,
 			);
@@ -94,6 +100,8 @@
 			);
 			mainGroup = 111007D33006162300751B82;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 111007DD3006162400751B82 /* Products */;
 			projectDirPath = "";
@@ -119,6 +127,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				11100867300623CD00751B82 /* Plan4Retirement.xcdatamodeld in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -332,6 +341,19 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCVersionGroup section */
+		11100865300623CC00751B82 /* Plan4Retirement.xcdatamodeld */ = {
+			isa = XCVersionGroup;
+			children = (
+				11100866300623CC00751B82 /* Plan4Retirement.xcdatamodel */,
+			);
+			currentVersion = 11100866300623CC00751B82 /* Plan4Retirement.xcdatamodel */;
+			path = Plan4Retirement.xcdatamodeld;
+			sourceTree = "<group>";
+			versionGroupType = wrapper.xcdatamodel;
+		};
+/* End XCVersionGroup section */
 	};
 	rootObject = 111007D43006162300751B82 /* Project object */;
 }
