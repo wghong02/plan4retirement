@@ -112,6 +112,7 @@ struct DashboardView: View {
                 .padding()
             }
             .navigationTitle("Dashboard")
+            .navigationBarTitleDisplayMode(.inline)
             .onAppear(perform: loadData)
             .onReceive(settings.$currentAge) { _ in loadData() }
             .onReceive(settings.$retirementAge) { _ in loadData() }

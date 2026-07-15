@@ -59,6 +59,7 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.inline)
             .alert("Reset Settings?", isPresented: $showResetConfirmation) {
                 Button("Reset", role: .destructive) {
                     settings.resetToDefaults()

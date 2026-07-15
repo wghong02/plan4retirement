@@ -75,6 +75,7 @@ struct ProjectionsView: View {
                 }
             }
             .navigationTitle("Projections")
+            .navigationBarTitleDisplayMode(.inline)
             .onAppear(perform: loadData)
             .sheet(isPresented: $showSaveSnapshot) {
                 SaveSnapshotView(isPresented: $showSaveSnapshot) { snapshotName in

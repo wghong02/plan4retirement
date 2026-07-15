@@ -12,10 +12,10 @@ struct ContentView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            // Tab 1: Data Input
+            // Tab 1: Accounts
             DataInputView()
                 .tabItem {
-                    Label("Data Input", systemImage: "pencil.and.list.clipboard")
+                    Label("Accounts", systemImage: "building.columns")
                 }
                 .tag(TabItem.dataInput)
 

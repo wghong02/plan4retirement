@@ -141,6 +141,7 @@ struct AssumptionsView: View {
                 }
             }
             .navigationTitle("Assumptions")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()

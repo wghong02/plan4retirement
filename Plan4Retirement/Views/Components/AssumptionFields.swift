@@ -14,11 +14,10 @@ struct StepperField: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text(title)
-                Spacer()
                 TextField("", text: $text)
                     .keyboardType(.numberPad)
                     .multilineTextAlignment(.center)
-                    .frame(width: 60)
+                    .frame(maxWidth: .infinity)
                     .focused(focus)
                 Stepper("", onIncrement: { adjust(1) }, onDecrement: { adjust(-1) })
                     .labelsHidden()
@@ -52,11 +51,10 @@ struct DecimalField: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text(title)
-                Spacer()
                 TextField("", text: $text)
                     .keyboardType(.decimalPad)
                     .multilineTextAlignment(.center)
-                    .frame(width: 110)
+                    .frame(maxWidth: .infinity)
                     .focused(focus)
                 if let suffix {
                     Text(suffix)

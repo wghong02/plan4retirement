@@ -61,7 +61,7 @@ struct DataInputView: View {
                                         Label("Update Balance", systemImage: "arrow.up.circle")
                                             .font(.subheadline)
                                     }
-                                    .buttonStyle(.bordered)
+                                    .buttonStyle(.borderless)
 
                                     Button(action: {
                                         selectedAccount = account
@@ -70,14 +70,20 @@ struct DataInputView: View {
                                         Label("History", systemImage: "clock.fill")
                                             .font(.subheadline)
                                     }
-                                    .buttonStyle(.bordered)
+                                    .buttonStyle(.borderless)
 
                                     Spacer()
                                 }
                             }
                             .padding(.vertical, 4)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    deleteAccount(account)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
                         }
-                        .onDelete(perform: deleteAccount)
                     }
                     .listStyle(.plain)
                 }
@@ -93,6 +99,7 @@ struct DataInputView: View {
                 .padding()
             }
             .navigationTitle("Accounts")
+            .navigationBarTitleDisplayMode(.inline)
             .onAppear(perform: loadAccounts)
             .sheet(isPresented: $showAddAccountSheet) {
                 AddAccountView(isPresented: $showAddAccountSheet) { newAccount in
@@ -132,15 +139,12 @@ struct DataInputView: View {
         }
     }
 
-    private func deleteAccount(at offsets: IndexSet) {
-        for index in offsets {
-            let account = accounts[index]
-            do {
-                try accountService.deleteAccount(by: account.id)
-                loadAccounts()
-            } catch {
-                print("Error deleting account: \(error)")
-            }
+    private func deleteAccount(_ account: Account) {
+        do {
+            try accountService.deleteAccount(by: account.id)
+            loadAccounts()
+        } catch {
+            print("Error deleting account: \(error)")
         }
     }
 
