@@ -28,6 +28,25 @@ struct ProjectionSnapshot: Identifiable, Codable {
         self.parametersUsed = parametersUsed
         self.createdDate = Date()
     }
+
+    /// Full initializer used when hydrating from storage, preserving the stored id and date.
+    init(
+        id: String,
+        name: String,
+        projectedRetirementAge: Int,
+        projectedBalance: Double,
+        projectionData: [ProjectionDataPoint],
+        parametersUsed: ProjectionParameters,
+        createdDate: Date
+    ) {
+        self.id = id
+        self.name = name
+        self.projectedRetirementAge = projectedRetirementAge
+        self.projectedBalance = projectedBalance
+        self.projectionData = projectionData
+        self.parametersUsed = parametersUsed
+        self.createdDate = createdDate
+    }
 }
 
 struct ProjectionDataPoint: Codable {

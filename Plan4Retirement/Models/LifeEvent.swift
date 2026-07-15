@@ -26,6 +26,23 @@ struct LifeEvent: Identifiable, Codable {
         self.amount = amount
         self.notes = notes
     }
+
+    /// Full initializer used when hydrating from storage, preserving the stored id.
+    init(
+        id: String,
+        name: String,
+        type: LifeEventType,
+        eventDate: Date,
+        amount: Double,
+        notes: String?
+    ) {
+        self.id = id
+        self.name = name
+        self.type = type
+        self.eventDate = eventDate
+        self.amount = amount
+        self.notes = notes
+    }
 }
 
 enum LifeEventType: String, Codable, CaseIterable {

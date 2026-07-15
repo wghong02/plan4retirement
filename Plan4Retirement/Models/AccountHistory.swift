@@ -26,4 +26,21 @@ struct AccountHistory: Identifiable, Codable {
         self.updateDate = updateDate
         self.notes = notes
     }
+
+    /// Full initializer used when hydrating from storage, preserving the stored id.
+    init(
+        id: String,
+        accountId: String,
+        actualBalance: Double,
+        projectedBalance: Double,
+        updateDate: Date,
+        notes: String?
+    ) {
+        self.id = id
+        self.accountId = accountId
+        self.actualBalance = actualBalance
+        self.projectedBalance = projectedBalance
+        self.updateDate = updateDate
+        self.notes = notes
+    }
 }

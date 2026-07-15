@@ -152,15 +152,24 @@ struct DataInputView: View {
     }
 
     private func deleteAccount(_ account: Account) {
+        // Removes the account and its balance history.
         do {
-            // Removes the account and its balance history.
             try accountService.deleteAccount(by: account.id)
-            // Saved projections were computed from the old portfolio, so clear them.
-            try snapshotService.deleteAllSnapshots()
-            loadAccounts()
         } catch {
             print("Error deleting account: \(error)")
         }
+
+        // Saved projections were computed from the old portfolio, so clear them.
+        // Kept separate so a snapshot failure can't block the account removal / UI refresh.
+        do {
+            try snapshotService.deleteAllSnapshots()
+        } catch {
+            print("Error clearing snapshots: \(error)")
+        }
+
+        // Drop the row immediately, then reconcile with the store.
+        accounts.removeAll { $0.id == account.id }
+        loadAccounts()
     }
 
     private func loadAccountHistory() {

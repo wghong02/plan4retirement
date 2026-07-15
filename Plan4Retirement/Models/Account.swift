@@ -30,6 +30,27 @@ struct Account: Identifiable, Codable {
         self.createdDate = Date()
         self.lastUpdatedDate = Date()
     }
+
+    /// Full initializer used when hydrating from storage, preserving the stored id and dates.
+    init(
+        id: String,
+        name: String,
+        type: AccountType,
+        currentBalance: Double,
+        annualContribution: Double,
+        expectedROI: Double,
+        createdDate: Date,
+        lastUpdatedDate: Date
+    ) {
+        self.id = id
+        self.name = name
+        self.type = type
+        self.currentBalance = currentBalance
+        self.annualContribution = annualContribution
+        self.expectedROI = expectedROI
+        self.createdDate = createdDate
+        self.lastUpdatedDate = lastUpdatedDate
+    }
 }
 
 enum AccountType: String, Codable, CaseIterable {

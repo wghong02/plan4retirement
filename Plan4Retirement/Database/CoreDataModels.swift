@@ -16,11 +16,14 @@ public class AccountEntity: NSManagedObject, Identifiable {
 
     func toAccount() -> Account {
         Account(
+            id: id,
             name: name,
             type: AccountType(rawValue: type) ?? .preTax,
             currentBalance: currentBalance,
             annualContribution: annualContribution,
-            expectedROI: expectedROI
+            expectedROI: expectedROI,
+            createdDate: createdDate,
+            lastUpdatedDate: lastUpdatedDate
         )
     }
 
@@ -50,6 +53,7 @@ public class AccountHistoryEntity: NSManagedObject, Identifiable {
 
     func toAccountHistory() -> AccountHistory {
         AccountHistory(
+            id: id,
             accountId: accountId,
             actualBalance: actualBalance,
             projectedBalance: projectedBalance,
@@ -92,11 +96,13 @@ public class ProjectionSnapshotEntity: NSManagedObject, Identifiable {
         }
 
         return ProjectionSnapshot(
+            id: id,
             name: name,
             projectedRetirementAge: Int(projectedRetirementAge),
             projectedBalance: projectedBalance,
             projectionData: dataPoints,
-            parametersUsed: parameters
+            parametersUsed: parameters,
+            createdDate: createdDate
         )
     }
 
@@ -134,6 +140,7 @@ public class LifeEventEntity: NSManagedObject, Identifiable {
 
     func toLifeEvent() -> LifeEvent {
         LifeEvent(
+            id: id,
             name: name,
             type: LifeEventType(rawValue: type) ?? .other,
             eventDate: eventDate,

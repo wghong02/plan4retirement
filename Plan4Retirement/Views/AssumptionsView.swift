@@ -79,7 +79,7 @@ struct AssumptionsView: View {
                     .onChange(of: growthText) { _ in capDecimals(&growthText); commit() }
 
                     DecimalField(
-                        title: "Annual Contribution Increase",
+                        title: "Contribution Annual Increase",
                         text: $contributionIncreaseText,
                         suffix: "%",
                         focus: $inputActive,
