@@ -3,6 +3,8 @@ import Foundation
 class ProjectionCalculator {
 
     // MARK: - Main Projection Calculation
+    /// Projects balances month by month across the full horizon. Yearly views are
+    /// derived by sampling one point per year (see `RetirementLineChart`).
     func calculateRetirementProjection(
         accounts: [Account],
         parameters: ProjectionParameters
@@ -10,31 +12,38 @@ class ProjectionCalculator {
 
         var dataPoints: [ProjectionDataPoint] = []
         var totalBalance = accounts.totalBalance
-        let baseContribution = accounts.reduce(0) { $0 + $1.annualContribution }
+        let baseAnnualContribution = accounts.reduce(0) { $0 + $1.annualContribution }
 
-        let growthRate = parameters.assetGrowthRate / 100.0
+        // Convert annual rates into their monthly-compounding equivalents.
+        let monthlyGrowthRate = pow(1 + parameters.assetGrowthRate / 100.0, 1.0 / 12.0) - 1
         let inflationRate = parameters.inflationRate / 100.0
+        let contributionIncreaseRate = parameters.annualContributionIncreaseRate / 100.0
 
-        for year in 0...(parameters.lifeExpectancy - parameters.currentAge) {
+        let totalMonths = max(0, parameters.lifeExpectancy - parameters.currentAge) * 12
+
+        for month in 0...totalMonths {
+            let year = month / 12
             let age = parameters.currentAge + year
             let balanceBeforeGrowth = totalBalance
 
             // Investment growth
-            totalBalance *= (1 + growthRate)
-            let growth = balanceBeforeGrowth * growthRate
+            totalBalance *= (1 + monthlyGrowthRate)
+            let growth = balanceBeforeGrowth * monthlyGrowthRate
 
-            // Inflation-adjusted cash flow: contribute while working, draw down once retired.
-            let inflationFactor = pow(1 + inflationRate, Double(year))
+            // Cash flow: contribute (with annual raises) while working, draw down
+            // inflation-adjusted spending once retired.
             var contribution = 0.0
             if age < parameters.retirementAge {
-                contribution = baseContribution * inflationFactor
+                let annualContribution = baseAnnualContribution * pow(1 + contributionIncreaseRate, Double(year))
+                contribution = annualContribution / 12.0
                 totalBalance += contribution
             } else {
-                totalBalance -= parameters.annualSpendingInRetirement * inflationFactor
+                let annualSpending = parameters.annualSpendingInRetirement * pow(1 + inflationRate, Double(year))
+                totalBalance -= annualSpending / 12.0
             }
 
-            // One-off life events scheduled for this year
-            for event in lifeEvents(parameters.lifeEvents, inYear: year) {
+            // One-off life events scheduled for this month
+            for event in lifeEvents(parameters.lifeEvents, inMonth: month) {
                 switch event.type {
                 case .housePurchase, .carPurchase, .majorExpense, .medicalExpense:
                     totalBalance -= event.amount
@@ -48,7 +57,7 @@ class ProjectionCalculator {
             totalBalance = max(0, totalBalance)
 
             dataPoints.append(ProjectionDataPoint(
-                year: year,
+                monthIndex: month,
                 age: age,
                 balance: totalBalance,
                 contribution: contribution,
@@ -60,50 +69,6 @@ class ProjectionCalculator {
             ?? dataPoints.last?.balance ?? totalBalance
 
         return (dataPoints, projectedBalance)
-    }
-
-    // MARK: - Scenario Comparison
-    func generateScenarios(
-        accounts: [Account],
-        parameters: ProjectionParameters
-    ) -> [ScenarioResult] {
-
-        let conservative = ProjectionParameters(
-            currentAge: parameters.currentAge,
-            retirementAge: parameters.retirementAge,
-            inflationRate: parameters.inflationRate + 0.5,
-            assetGrowthRate: max(1, parameters.assetGrowthRate - 2),
-            lifeExpectancy: parameters.lifeExpectancy,
-            annualSpendingInRetirement: parameters.annualSpendingInRetirement,
-            lifeEvents: parameters.lifeEvents
-        )
-
-        let aggressive = ProjectionParameters(
-            currentAge: parameters.currentAge,
-            retirementAge: max(50, parameters.retirementAge - 3),
-            inflationRate: max(0, parameters.inflationRate - 0.5),
-            assetGrowthRate: parameters.assetGrowthRate + 2,
-            lifeExpectancy: parameters.lifeExpectancy,
-            annualSpendingInRetirement: parameters.annualSpendingInRetirement,
-            lifeEvents: parameters.lifeEvents
-        )
-
-        func scenario(_ name: String, _ params: ProjectionParameters) -> ScenarioResult {
-            let result = calculateRetirementProjection(accounts: accounts, parameters: params)
-            return ScenarioResult(
-                name: name,
-                retirementAge: params.retirementAge,
-                projectedBalance: result.projectedBalance,
-                dataPoints: result.projectionDataPoints,
-                assumptions: params
-            )
-        }
-
-        return [
-            scenario("Conservative", conservative),
-            scenario("Baseline", parameters),
-            scenario("Aggressive", aggressive)
-        ]
     }
 
     // MARK: - Account Distribution Analysis
@@ -127,24 +92,16 @@ class ProjectionCalculator {
     }
 
     // MARK: - Helper Methods
-    /// Life events whose date falls `year` years from today.
-    private func lifeEvents(_ events: [LifeEvent], inYear year: Int) -> [LifeEvent] {
+    /// Life events whose date falls `month` months from today.
+    private func lifeEvents(_ events: [LifeEvent], inMonth month: Int) -> [LifeEvent] {
         events.filter { event in
-            let yearsFromNow = Calendar.current.dateComponents([.year], from: Date(), to: event.eventDate).year ?? -1
-            return yearsFromNow == year
+            let monthsFromNow = Calendar.current.dateComponents([.month], from: Date(), to: event.eventDate).month ?? -1
+            return monthsFromNow == month
         }
     }
 }
 
 // MARK: - Supporting Structures
-struct ScenarioResult: Codable {
-    let name: String
-    let retirementAge: Int
-    let projectedBalance: Double
-    let dataPoints: [ProjectionDataPoint]
-    let assumptions: ProjectionParameters
-}
-
 struct AccountDistributionAnalysis {
     let totalBalance: Double
     let distribution: [String: Double] // account type -> total balance

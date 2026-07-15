@@ -3,46 +3,83 @@ import SwiftUI
 struct RetirementLineChart: View {
     let dataPoints: [ProjectionDataPoint]
     let title: String
+    /// Calendar year/month corresponding to projection month 0. Defaults to today;
+    /// saved snapshots pass the date they were created so their axis stays fixed.
+    var startYear: Int = Calendar.current.component(.year, from: Date())
+    var startMonth: Int = Calendar.current.component(.month, from: Date())
     let height: CGFloat = 350
 
     private let maxPoints = 60
 
     @State private var selectedIndex: Int? = nil
+    @Binding var displayMode: DisplayMode
+
+    enum DisplayMode {
+        case monthly // First 5 years at monthly resolution
+        case yearly  // Whole horizon, one point per year
+    }
+
+    private static let monthAbbreviations = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    ]
 
     var filteredData: [ProjectionDataPoint] {
-        guard dataPoints.count > maxPoints else { return dataPoints }
-
-        // Take every nth point to fit within maxPoints
-        let step = max(1, dataPoints.count / maxPoints)
-        return stride(from: 0, to: dataPoints.count, by: step).map { dataPoints[$0] }
+        switch displayMode {
+        case .monthly:
+            // Near-term detail: first maxPoints months as-is.
+            return Array(dataPoints.prefix(maxPoints))
+        case .yearly:
+            let yearly = dataPoints.filter { $0.monthIndex % 12 == 0 }
+            guard yearly.count > maxPoints else { return yearly }
+            let step = max(1, yearly.count / maxPoints)
+            return stride(from: 0, to: yearly.count, by: step).map { yearly[$0] }
+        }
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(title)
-                .font(.headline)
+            // Header with title and mode selector
+            HStack {
+                Text(title)
+                    .font(.headline)
+
+                Spacer()
+
+                Picker("Mode", selection: $displayMode) {
+                    Text("Monthly").tag(DisplayMode.monthly)
+                    Text("Yearly").tag(DisplayMode.yearly)
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 150)
+            }
 
             if filteredData.isEmpty {
                 emptyStateView()
             } else {
-                // Chart
+                // Chart. Detail requires a press-and-hold so a plain drag still scrolls.
                 ZStack {
                     canvas
                         .gesture(
-                            DragGesture()
+                            LongPressGesture(minimumDuration: 0.2)
+                                .sequenced(before: DragGesture(minimumDistance: 0))
                                 .onChanged { value in
-                                    let frame = CGRect(x: 0, y: 0, width: 300, height: height)
-                                    updateSelectedIndex(at: value.location, in: frame)
+                                    if case .second(true, let drag?) = value {
+                                        let frame = CGRect(x: 0, y: 0, width: 300, height: height)
+                                        updateSelectedIndex(at: drag.location, in: frame)
+                                    }
                                 }
+                                .onEnded { _ in selectedIndex = nil }
                         )
 
-                    // Tooltip on touch
+                    // Tooltip while holding
                     if let index = selectedIndex, index < filteredData.count {
                         tooltipView(for: filteredData[index])
                     }
                 }
                 .frame(height: height)
-                .background(Color(.systemGray6))
+                // Darker shade signals this area is interactive (press-and-hold), not scrollable.
+                .background(Color(.systemGray4))
                 .cornerRadius(8)
 
                 // Stats
@@ -127,7 +164,7 @@ struct RetirementLineChart: View {
                 if index % labelInterval == 0 || index == filteredData.count - 1 {
                     let x = padding + (CGFloat(index) / CGFloat(max(1, filteredData.count - 1))) * chartWidth
 
-                    let text = Text("Age \(point.age)")
+                    let text = Text(verbatim: xAxisLabel(for: point))
                         .font(.caption2)
                         .foregroundColor(.gray)
                     context.draw(text, at: CGPoint(x: x, y: size.height - 20), anchor: .center)
@@ -139,8 +176,14 @@ struct RetirementLineChart: View {
     // MARK: - Tooltip View
     @ViewBuilder
     private func tooltipView(for point: ProjectionDataPoint) -> some View {
+        // Stored figures are per-month; scale to per-year in yearly mode.
+        let isYearly = displayMode == .yearly
+        let periodMultiplier: Double = isYearly ? 12 : 1
+        let contributionLabel = isYearly ? "Annual Contribution:" : "Monthly Contribution:"
+        let growthLabel = isYearly ? "Annual Growth:" : "Monthly Growth:"
+
         VStack(alignment: .leading, spacing: 4) {
-            Text("Age \(point.age)")
+            Text(verbatim: periodLabel(for: point))
                 .font(.subheadline)
                 .fontWeight(.semibold)
 
@@ -156,10 +199,26 @@ struct RetirementLineChart: View {
             }
 
             HStack {
-                Text("Year \(point.year):")
+                Text("Age:")
                     .font(.caption)
                 Spacer()
-                Text(point.contribution.formatted(as: true))
+                Text(verbatim: "\(point.age)")
+                    .font(.caption)
+            }
+
+            HStack {
+                Text(contributionLabel)
+                    .font(.caption)
+                Spacer()
+                Text((point.contribution * periodMultiplier).formatted(as: true))
+                    .font(.caption)
+            }
+
+            HStack {
+                Text(growthLabel)
+                    .font(.caption)
+                Spacer()
+                Text((point.growth * periodMultiplier).formatted(as: true))
                     .font(.caption)
             }
         }
@@ -179,17 +238,6 @@ struct RetirementLineChart: View {
                     .font(.caption)
                     .foregroundColor(.gray)
                 Text((filteredData.first?.balance ?? 0).formatted(as: true))
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-            }
-
-            Spacer()
-
-            VStack(alignment: .center, spacing: 4) {
-                Text("Data Points")
-                    .font(.caption)
-                    .foregroundColor(.gray)
-                Text("\(filteredData.count)")
                     .font(.subheadline)
                     .fontWeight(.semibold)
             }
@@ -237,27 +285,57 @@ struct RetirementLineChart: View {
             selectedIndex = index
         }
     }
+
+    /// Compact axis label: calendar year in yearly mode, "MMM YY" in monthly mode.
+    private func xAxisLabel(for point: ProjectionDataPoint) -> String {
+        switch displayMode {
+        case .yearly:
+            return "\(startYear + point.year)"
+        case .monthly:
+            let (year, month) = calendarComponents(for: point)
+            return "\(Self.monthAbbreviations[month]) \(year % 100)"
+        }
+    }
+
+    /// Full label used in the tooltip header.
+    private func periodLabel(for point: ProjectionDataPoint) -> String {
+        switch displayMode {
+        case .yearly:
+            return "\(startYear + point.year)"
+        case .monthly:
+            let (year, month) = calendarComponents(for: point)
+            return "\(Self.monthAbbreviations[month]) \(year)"
+        }
+    }
+
+    /// Absolute (year, 0-based month) for a data point given the start anchor.
+    private func calendarComponents(for point: ProjectionDataPoint) -> (year: Int, month: Int) {
+        let absoluteMonth = (startMonth - 1) + point.monthIndex
+        return (startYear + absoluteMonth / 12, absoluteMonth % 12)
+    }
 }
 
 #Preview {
     let sampleData = generateSampleProjectionData()
     RetirementLineChart(
         dataPoints: sampleData,
-        title: "Retirement Projection"
+        title: "Retirement Projection",
+        displayMode: .constant(.yearly)
     )
     .padding()
 }
 
 private func generateSampleProjectionData() -> [ProjectionDataPoint] {
     var data: [ProjectionDataPoint] = []
-    for i in 0..<40 {
-        let balance = Double(50000) * (1.0 + Double(i) * 0.08)
-        let growth = Double(50000) * Double(i) * 0.08
+    for month in 0..<480 {
+        let year = month / 12
+        let balance = Double(50000) * (1.0 + Double(year) * 0.08)
+        let growth = Double(50000) * Double(year) * 0.08
         data.append(ProjectionDataPoint(
-            year: i,
-            age: 30 + i,
+            monthIndex: month,
+            age: 30 + year,
             balance: balance,
-            contribution: 10000.0,
+            contribution: 10000.0 / 12.0,
             growth: growth
         ))
     }

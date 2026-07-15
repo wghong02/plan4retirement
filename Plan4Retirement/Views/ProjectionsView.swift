@@ -1,13 +1,17 @@
+import Foundation
 import SwiftUI
 
 struct ProjectionsView: View {
     @EnvironmentObject var settings: SettingsService
     @State private var accounts: [Account] = []
-    @State private var scenarios: [ScenarioResult] = []
+    @State private var projection: (projectionDataPoints: [ProjectionDataPoint], projectedBalance: Double)? = nil
+    @State private var parameters: ProjectionParameters? = nil
     @State private var savedSnapshots: [ProjectionSnapshot] = []
     @State private var showSaveSnapshot = false
     @State private var filterMode: FilterMode = .current
     @State private var selectedSnapshotId: String? = nil
+    @State private var chartMode: RetirementLineChart.DisplayMode = .yearly
+    @State private var savedChartMode: RetirementLineChart.DisplayMode = .yearly
 
     private let accountService = AccountService()
     private let calculator = ProjectionCalculator()
@@ -50,14 +54,6 @@ struct ProjectionsView: View {
                             emptyStateView()
                         }
 
-                        Divider()
-                            .padding(.vertical, 8)
-
-                        // Scenarios comparison section
-                        if !scenarios.isEmpty {
-                            scenarioComparisonSection()
-                        }
-
                         // Save snapshot button
                         if filterMode == .current && !accounts.isEmpty {
                             Button(action: { showSaveSnapshot = true }) {
@@ -96,35 +92,44 @@ struct ProjectionsView: View {
                 .font(.headline)
                 .padding(.horizontal)
 
-            if let baselineScenario = scenarios.first(where: { $0.name == "Baseline" }) {
+            if let projection, let parameters {
                 RetirementLineChart(
-                    dataPoints: baselineScenario.dataPoints,
-                    title: "Retirement Growth Projection"
+                    dataPoints: projection.projectionDataPoints,
+                    title: "Retirement Growth Projection",
+                    displayMode: $chartMode
                 )
                 .cardStyle()
 
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Text("Projected Balance at \(baselineScenario.retirementAge)")
+                        Text("Projected Balance at \(parameters.retirementAge)")
                             .font(.subheadline)
                         Spacer()
-                        Text(baselineScenario.projectedBalance.formatted(as: true))
+                        Text(projection.projectedBalance.formatted(as: true))
                             .font(.headline)
                     }
 
                     HStack {
-                        Text("Growth Rate")
+                        Text("\(rateLabelPrefix) Growth Rate")
                             .font(.subheadline)
                         Spacer()
-                        Text(baselineScenario.assumptions.assetGrowthRate.formattedAsPercentage())
+                        Text(periodRate(parameters.assetGrowthRate).formattedAsPercentage())
                             .font(.subheadline)
                     }
 
                     HStack {
-                        Text("Inflation Rate")
+                        Text("\(rateLabelPrefix) Inflation Rate")
                             .font(.subheadline)
                         Spacer()
-                        Text(baselineScenario.assumptions.inflationRate.formattedAsPercentage())
+                        Text(periodRate(parameters.inflationRate).formattedAsPercentage())
+                            .font(.subheadline)
+                    }
+
+                    HStack {
+                        Text("\(rateLabelPrefix) Contribution Increase")
+                            .font(.subheadline)
+                        Spacer()
+                        Text(periodRate(parameters.annualContributionIncreaseRate).formattedAsPercentage())
                             .font(.subheadline)
                     }
                 }
@@ -169,7 +174,10 @@ struct ProjectionsView: View {
                 if let snapshot = savedSnapshots.first(where: { $0.id == selectedSnapshotId }) {
                     RetirementLineChart(
                         dataPoints: snapshot.projectionData,
-                        title: "Projection: \(snapshot.name)"
+                        title: "Projection: \(snapshot.name)",
+                        startYear: Calendar.current.component(.year, from: snapshot.createdDate),
+                        startMonth: Calendar.current.component(.month, from: snapshot.createdDate),
+                        displayMode: $savedChartMode
                     )
                     .cardStyle()
 
@@ -239,55 +247,6 @@ struct ProjectionsView: View {
         }
     }
 
-    // MARK: - Scenario Comparison Section
-    @ViewBuilder
-    private func scenarioComparisonSection() -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Scenario Comparison")
-                .font(.headline)
-
-            ForEach(scenarios, id: \.name) { scenario in
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text(scenario.name)
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-
-                        Spacer()
-
-                        VStack(alignment: .trailing, spacing: 4) {
-                            Text(scenario.projectedBalance.formatted(as: true))
-                                .font(.headline)
-                            Text("at age \(scenario.retirementAge)")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                        }
-                    }
-
-                    HStack(spacing: 12) {
-                        Label(
-                            "Growth: \(scenario.assumptions.assetGrowthRate.formattedAsPercentage())",
-                            systemImage: "arrow.up.right"
-                        )
-                        .font(.caption)
-                        .foregroundColor(.gray)
-
-                        Label(
-                            "Inflation: \(scenario.assumptions.inflationRate.formattedAsPercentage())",
-                            systemImage: "percent"
-                        )
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                    }
-                }
-                .cardStyle(cornerRadius: 8)
-            }
-        }
-        .padding()
-        .background(Color(.systemGray5).opacity(0.5))
-        .cornerRadius(12)
-    }
-
     // MARK: - Saved Snapshots List Section
     @ViewBuilder
     private func savedSnapshotsListSection() -> some View {
@@ -347,6 +306,22 @@ struct ProjectionsView: View {
     }
 
     // MARK: - Computed Properties
+    /// "Monthly" or "Annual" depending on the current chart's display mode.
+    private var rateLabelPrefix: String {
+        chartMode == .monthly ? "Monthly" : "Annual"
+    }
+
+    /// Converts an annual percentage rate to its monthly-compounding equivalent
+    /// when the chart is in monthly mode.
+    private func periodRate(_ annualPercent: Double) -> Double {
+        switch chartMode {
+        case .yearly:
+            return annualPercent
+        case .monthly:
+            return (pow(1 + annualPercent / 100.0, 1.0 / 12.0) - 1) * 100.0
+        }
+    }
+
     private var selectedSnapshotLabel: String {
         if let id = selectedSnapshotId,
            let snapshot = savedSnapshots.first(where: { $0.id == id }) {
@@ -364,7 +339,8 @@ struct ProjectionsView: View {
             let lifeEvents = try lifeEventService.getAllLifeEvents()
             let params = settings.getProjectionParameters(lifeEvents: lifeEvents)
 
-            scenarios = calculator.generateScenarios(accounts: accounts, parameters: params)
+            parameters = params
+            projection = calculator.calculateRetirementProjection(accounts: accounts, parameters: params)
 
             // Set default selected snapshot
             if selectedSnapshotId == nil, let first = savedSnapshots.first {
@@ -377,14 +353,14 @@ struct ProjectionsView: View {
 
     private func saveSnapshot(name: String) {
         do {
-            guard let baselineScenario = scenarios.first(where: { $0.name == "Baseline" }) else { return }
+            guard let projection, let parameters else { return }
 
             let snapshot = ProjectionSnapshot(
                 name: name,
-                projectedRetirementAge: baselineScenario.retirementAge,
-                projectedBalance: baselineScenario.projectedBalance,
-                projectionData: baselineScenario.dataPoints,
-                parametersUsed: baselineScenario.assumptions
+                projectedRetirementAge: parameters.retirementAge,
+                projectedBalance: projection.projectedBalance,
+                projectionData: projection.projectionDataPoints,
+                parametersUsed: parameters
             )
 
             try snapshotService.saveSnapshot(snapshot)

@@ -31,11 +31,14 @@ struct ProjectionSnapshot: Identifiable, Codable {
 }
 
 struct ProjectionDataPoint: Codable {
-    let year: Int
+    let monthIndex: Int // months since projection start (0-based)
     let age: Int
     let balance: Double
-    let contribution: Double
-    let growth: Double
+    let contribution: Double // contribution applied this month
+    let growth: Double // investment growth this month
+
+    /// Whole years since the projection start.
+    var year: Int { monthIndex / 12 }
 }
 
 struct ProjectionParameters: Codable {
@@ -43,6 +46,7 @@ struct ProjectionParameters: Codable {
     var retirementAge: Int
     var inflationRate: Double // e.g., 2.5
     var assetGrowthRate: Double // e.g., 7.0
+    var annualContributionIncreaseRate: Double // e.g., 2.0 (% raise applied to contributions each year)
     var lifeExpectancy: Int
     var annualSpendingInRetirement: Double
     var lifeEvents: [LifeEvent]
@@ -52,6 +56,7 @@ struct ProjectionParameters: Codable {
         retirementAge: Int = 67,
         inflationRate: Double = 2.5,
         assetGrowthRate: Double = 7.0,
+        annualContributionIncreaseRate: Double = 2.0,
         lifeExpectancy: Int = 95,
         annualSpendingInRetirement: Double = 50000,
         lifeEvents: [LifeEvent] = []
@@ -60,6 +65,7 @@ struct ProjectionParameters: Codable {
         self.retirementAge = retirementAge
         self.inflationRate = inflationRate
         self.assetGrowthRate = assetGrowthRate
+        self.annualContributionIncreaseRate = annualContributionIncreaseRate
         self.lifeExpectancy = lifeExpectancy
         self.annualSpendingInRetirement = annualSpendingInRetirement
         self.lifeEvents = lifeEvents

@@ -73,7 +73,7 @@ struct DashboardView: View {
 
                                 HStack {
                                     Label(
-                                        "\(result.projectionDataPoints.count) years of projections",
+                                        "\(max(0, settings.lifeExpectancy - settings.currentAge)) years of projections",
                                         systemImage: "calendar"
                                     )
                                     .font(.caption)
@@ -127,6 +127,9 @@ struct DashboardView: View {
             .onReceive(settings.$retirementAge) { _ in loadData() }
             .onReceive(settings.$inflationRate) { _ in loadData() }
             .onReceive(settings.$assetGrowthRate) { _ in loadData() }
+            .onReceive(settings.$annualContributionIncreaseRate) { _ in loadData() }
+            .onReceive(settings.$annualSpendingInRetirement) { _ in loadData() }
+            .onReceive(settings.$lifeExpectancy) { _ in loadData() }
         }
     }
 
