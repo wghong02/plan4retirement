@@ -12,6 +12,17 @@ extension Double {
     func formattedAsPercentage() -> String {
         return String(format: "%.2f%%", self)
     }
+
+    /// Compact currency label for chart axes, e.g. "$1.2M", "$45K", "$500".
+    func formattedAsAxisLabel() -> String {
+        if self >= 1_000_000 {
+            return String(format: "$%.1fM", self / 1_000_000)
+        } else if self >= 1_000 {
+            return String(format: "$%.0fK", self / 1_000)
+        } else {
+            return "$\(Int(self))"
+        }
+    }
 }
 
 extension NumberFormatter {

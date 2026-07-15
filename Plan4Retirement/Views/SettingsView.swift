@@ -40,20 +40,6 @@ struct SettingsView: View {
                         Text("1.0.0")
                             .foregroundColor(.gray)
                     }
-
-                    HStack {
-                        Text("Database")
-                        Spacer()
-                        Text("SQLite")
-                            .foregroundColor(.gray)
-                    }
-
-                    HStack {
-                        Text("Data Location")
-                        Spacer()
-                        Text("Local Device")
-                            .foregroundColor(.gray)
-                    }
                 }
             }
             .navigationTitle("Settings")

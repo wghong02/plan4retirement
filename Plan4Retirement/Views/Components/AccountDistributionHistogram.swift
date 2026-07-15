@@ -6,7 +6,6 @@ struct AccountDistributionHistogram: View {
     let height: CGFloat = 280
 
     @State private var selectedBar: String? = nil
-    @State private var zoomScale: CGFloat = 1.0
 
     private let colors: [Color] = [
         .blue, .green, .orange, .red, .purple, .pink, .yellow, .cyan
@@ -72,7 +71,6 @@ struct AccountDistributionHistogram: View {
             for i in stride(from: 0, through: 4, by: 1) {
                 let y = padding + CGFloat(i) * (chartHeight / 4)
                 let value = maxValue - (Double(i) / 4.0) * maxValue
-                let labelValue = formatYAxisLabel(value)
 
                 // Grid line
                 var gridPath = Path()
@@ -81,7 +79,7 @@ struct AccountDistributionHistogram: View {
                 context.stroke(gridPath, with: .color(.gray.opacity(0.2)), lineWidth: 0.5)
 
                 // Y axis label
-                let text = Text(labelValue)
+                let text = Text(value.formattedAsAxisLabel())
                     .font(.caption2)
                     .foregroundColor(.gray)
                 context.draw(text, at: CGPoint(x: padding - 40, y: y), anchor: .center)
@@ -222,16 +220,6 @@ struct AccountDistributionHistogram: View {
         if barIndex >= 0 && barIndex < barCount {
             let sortedKeys = distribution.keys.sorted()
             selectedBar = sortedKeys[barIndex]
-        }
-    }
-
-    private func formatYAxisLabel(_ value: Double) -> String {
-        if value >= 1_000_000 {
-            return String(format: "$%.1fM", value / 1_000_000)
-        } else if value >= 1_000 {
-            return String(format: "$%.0fK", value / 1_000)
-        } else {
-            return "$\(Int(value))"
         }
     }
 }

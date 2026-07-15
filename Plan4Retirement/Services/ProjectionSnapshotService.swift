@@ -22,7 +22,7 @@ class ProjectionSnapshotService {
             try deleteOldestSnapshot()
         }
 
-        guard let entity = ProjectionSnapshotEntity.fromProjectionSnapshot(snapshot, context: context) else { return }
+        guard ProjectionSnapshotEntity.fromProjectionSnapshot(snapshot, context: context) != nil else { return }
         try context.save()
     }
 

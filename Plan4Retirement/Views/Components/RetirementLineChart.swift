@@ -5,25 +5,11 @@ struct RetirementLineChart: View {
     let title: String
     let height: CGFloat = 350
 
+    private let maxPoints = 60
+
     @State private var selectedIndex: Int? = nil
-    @State private var zoomScale: CGFloat = 1.0
-    @State private var displayMode: DisplayMode = .yearly
-    @State private var touchLocation: CGPoint = .zero
-
-    enum DisplayMode {
-        case monthly  // Max 5 years (60 months)
-        case yearly   // Max 60 years
-
-        var maxPoints: Int {
-            switch self {
-            case .monthly: return 60
-            case .yearly: return 60
-            }
-        }
-    }
 
     var filteredData: [ProjectionDataPoint] {
-        let maxPoints = displayMode.maxPoints
         guard dataPoints.count > maxPoints else { return dataPoints }
 
         // Take every nth point to fit within maxPoints
@@ -33,20 +19,8 @@ struct RetirementLineChart: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Header with title and mode selector
-            HStack {
-                Text(title)
-                    .font(.headline)
-
-                Spacer()
-
-                Picker("Mode", selection: $displayMode) {
-                    Text("Monthly").tag(DisplayMode.monthly)
-                    Text("Yearly").tag(DisplayMode.yearly)
-                }
-                .pickerStyle(.segmented)
-                .frame(width: 150)
-            }
+            Text(title)
+                .font(.headline)
 
             if filteredData.isEmpty {
                 emptyStateView()
@@ -58,7 +32,6 @@ struct RetirementLineChart: View {
                             DragGesture()
                                 .onChanged { value in
                                     let frame = CGRect(x: 0, y: 0, width: 300, height: height)
-                                    touchLocation = value.location
                                     updateSelectedIndex(at: value.location, in: frame)
                                 }
                         )
@@ -104,7 +77,6 @@ struct RetirementLineChart: View {
             for i in stride(from: 0, through: 4, by: 1) {
                 let y = padding + CGFloat(i) * (chartHeight / 4)
                 let balance = maxBalance - (Double(i) / 4.0) * balanceRange
-                let labelValue = formatYAxisLabel(balance)
 
                 // Grid line
                 var gridPath = Path()
@@ -113,7 +85,7 @@ struct RetirementLineChart: View {
                 context.stroke(gridPath, with: .color(.gray.opacity(0.2)), lineWidth: 0.5)
 
                 // Y axis label
-                let text = Text(labelValue)
+                let text = Text(balance.formattedAsAxisLabel())
                     .font(.caption2)
                     .foregroundColor(.gray)
                 context.draw(text, at: CGPoint(x: padding - 40, y: y), anchor: .center)
@@ -154,9 +126,8 @@ struct RetirementLineChart: View {
             for (index, point) in filteredData.enumerated() {
                 if index % labelInterval == 0 || index == filteredData.count - 1 {
                     let x = padding + (CGFloat(index) / CGFloat(max(1, filteredData.count - 1))) * chartWidth
-                    let label = formatXAxisLabel(point, mode: displayMode)
 
-                    let text = Text(label)
+                    let text = Text("Age \(point.age)")
                         .font(.caption2)
                         .foregroundColor(.gray)
                     context.draw(text, at: CGPoint(x: x, y: size.height - 20), anchor: .center)
@@ -264,25 +235,6 @@ struct RetirementLineChart: View {
 
         if index >= 0 && index < filteredData.count {
             selectedIndex = index
-        }
-    }
-
-    private func formatXAxisLabel(_ point: ProjectionDataPoint, mode: DisplayMode) -> String {
-        switch mode {
-        case .monthly:
-            return "M\(point.year % 12)"
-        case .yearly:
-            return "Age \(point.age)"
-        }
-    }
-
-    private func formatYAxisLabel(_ value: Double) -> String {
-        if value >= 1_000_000 {
-            return String(format: "$%.1fM", value / 1_000_000)
-        } else if value >= 1_000 {
-            return String(format: "$%.0fK", value / 1_000)
-        } else {
-            return "$\(Int(value))"
         }
     }
 }

@@ -3,7 +3,7 @@ import SwiftUI
 struct DashboardView: View {
     @EnvironmentObject var settings: SettingsService
     @State private var accounts: [Account] = []
-    @State private var projectionResult: (projectionDataPoints: [ProjectionDataPoint], projectedBalance: Double, projectedRetirementAge: Int?)? = nil
+    @State private var projectionResult: (projectionDataPoints: [ProjectionDataPoint], projectedBalance: Double)? = nil
 
     private let accountService = AccountService()
     private let calculator = ProjectionCalculator()
@@ -58,14 +58,12 @@ struct DashboardView: View {
                                 }
                             }
                         }
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(12)
+                        .cardStyle()
 
                         // Projected Retirement Card
                         if let result = projectionResult {
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("At Retirement (\(result.projectedRetirementAge ?? settings.retirementAge))")
+                                Text("At Retirement (\(settings.retirementAge))")
                                     .font(.subheadline)
                                     .foregroundColor(.gray)
 
@@ -84,9 +82,7 @@ struct DashboardView: View {
                                     Spacer()
                                 }
                             }
-                            .padding()
-                            .background(Color(.systemGray6))
-                            .cornerRadius(12)
+                            .cardStyle()
                         }
 
                         // Account Breakdown
@@ -118,9 +114,7 @@ struct DashboardView: View {
                                 .padding(.vertical, 8)
                             }
                         }
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(12)
+                        .cardStyle()
 
                         Spacer()
                     }
@@ -137,7 +131,7 @@ struct DashboardView: View {
     }
 
     private var totalAssets: Double {
-        accounts.reduce(0) { $0 + $1.currentBalance }
+        accounts.totalBalance
     }
 
     private var averageROI: Double {
@@ -152,17 +146,10 @@ struct DashboardView: View {
             let lifeEvents = try lifeEventService.getAllLifeEvents()
             let params = settings.getProjectionParameters(lifeEvents: lifeEvents)
 
-            let result = calculator.calculateRetirementProjection(
+            projectionResult = calculator.calculateRetirementProjection(
                 accounts: accounts,
-                currentAge: params.currentAge,
-                retirementAge: params.retirementAge,
-                inflationRate: params.inflationRate,
-                assetGrowthRate: params.assetGrowthRate,
-                lifeExpectancy: params.lifeExpectancy,
-                lifeEvents: params.lifeEvents
+                parameters: params
             )
-
-            projectionResult = result
         } catch {
             print("Error loading data: \(error)")
         }

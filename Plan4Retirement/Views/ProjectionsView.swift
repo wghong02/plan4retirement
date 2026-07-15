@@ -8,7 +8,6 @@ struct ProjectionsView: View {
     @State private var showSaveSnapshot = false
     @State private var filterMode: FilterMode = .current
     @State private var selectedSnapshotId: String? = nil
-    @State private var selectedAccountType: String = "All"
 
     private let accountService = AccountService()
     private let calculator = ProjectionCalculator()
@@ -102,9 +101,7 @@ struct ProjectionsView: View {
                     dataPoints: baselineScenario.dataPoints,
                     title: "Retirement Growth Projection"
                 )
-                .padding()
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
+                .cardStyle()
 
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
@@ -131,9 +128,7 @@ struct ProjectionsView: View {
                             .font(.subheadline)
                     }
                 }
-                .padding()
-                .background(Color(.systemGray6))
-                .cornerRadius(8)
+                .cardStyle(cornerRadius: 8)
             }
         }
     }
@@ -168,9 +163,7 @@ struct ProjectionsView: View {
                         Spacer()
                         Image(systemName: "chevron.down")
                     }
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(8)
+                    .cardStyle(cornerRadius: 8)
                 }
 
                 if let snapshot = savedSnapshots.first(where: { $0.id == selectedSnapshotId }) {
@@ -178,9 +171,7 @@ struct ProjectionsView: View {
                         dataPoints: snapshot.projectionData,
                         title: "Projection: \(snapshot.name)"
                     )
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(12)
+                    .cardStyle()
 
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
@@ -200,9 +191,7 @@ struct ProjectionsView: View {
                                 .foregroundColor(.gray)
                         }
                     }
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(8)
+                    .cardStyle(cornerRadius: 8)
                 }
             }
         }
@@ -222,9 +211,7 @@ struct ProjectionsView: View {
                 distribution: distribution.distribution,
                 title: "Balance by Tax Treatment"
             )
-            .padding()
-            .background(Color(.systemGray6))
-            .cornerRadius(12)
+            .cardStyle()
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Total Assets: \(distribution.totalBalance.formatted(as: true))")
@@ -248,9 +235,7 @@ struct ProjectionsView: View {
                     }
                 }
             }
-            .padding()
-            .background(Color(.systemGray6))
-            .cornerRadius(8)
+            .cardStyle(cornerRadius: 8)
         }
     }
 
@@ -295,9 +280,7 @@ struct ProjectionsView: View {
                         .foregroundColor(.gray)
                     }
                 }
-                .padding()
-                .background(Color(.systemGray6))
-                .cornerRadius(8)
+                .cardStyle(cornerRadius: 8)
             }
         }
         .padding()
@@ -336,9 +319,7 @@ struct ProjectionsView: View {
                         }
                     }
                 }
-                .padding()
-                .background(Color(.systemGray6))
-                .cornerRadius(8)
+                .cardStyle(cornerRadius: 8)
             }
         }
         .padding()

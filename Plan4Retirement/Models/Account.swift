@@ -40,3 +40,10 @@ enum AccountType: String, Codable, CaseIterable {
         self.rawValue
     }
 }
+
+extension Array where Element == Account {
+    /// Combined current balance across all accounts.
+    var totalBalance: Double {
+        reduce(0) { $0 + $1.currentBalance }
+    }
+}

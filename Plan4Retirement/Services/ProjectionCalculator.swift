@@ -5,68 +5,61 @@ class ProjectionCalculator {
     // MARK: - Main Projection Calculation
     func calculateRetirementProjection(
         accounts: [Account],
-        currentAge: Int,
-        retirementAge: Int,
-        inflationRate: Double,
-        assetGrowthRate: Double,
-        lifeExpectancy: Int,
-        lifeEvents: [LifeEvent] = []
-    ) -> (projectionDataPoints: [ProjectionDataPoint], projectedBalance: Double, projectedRetirementAge: Int?) {
+        parameters: ProjectionParameters
+    ) -> (projectionDataPoints: [ProjectionDataPoint], projectedBalance: Double) {
 
         var dataPoints: [ProjectionDataPoint] = []
-        var totalBalance = accounts.reduce(0) { $0 + $1.currentBalance }
-        let totalAnnualContribution = accounts.reduce(0) { $0 + $1.annualContribution }
-        let averageROI = calculateWeightedAverageROI(accounts: accounts)
+        var totalBalance = accounts.totalBalance
+        let baseContribution = accounts.reduce(0) { $0 + $1.annualContribution }
 
-        let yearlyGrowthRate = (assetGrowthRate / 100.0) + (inflationRate / 100.0)
-        var projectedRetirementAge: Int? = nil
+        let growthRate = parameters.assetGrowthRate / 100.0
+        let inflationRate = parameters.inflationRate / 100.0
 
-        for year in 0...(lifeExpectancy - currentAge) {
-            let age = currentAge + year
+        for year in 0...(parameters.lifeExpectancy - parameters.currentAge) {
+            let age = parameters.currentAge + year
             let balanceBeforeGrowth = totalBalance
 
-            // Apply growth
-            totalBalance = totalBalance * (1 + assetGrowthRate / 100.0)
+            // Investment growth
+            totalBalance *= (1 + growthRate)
+            let growth = balanceBeforeGrowth * growthRate
 
-            // Add contributions (only if not retired)
-            if age < retirementAge {
-                totalBalance += totalAnnualContribution
+            // Inflation-adjusted cash flow: contribute while working, draw down once retired.
+            let inflationFactor = pow(1 + inflationRate, Double(year))
+            var contribution = 0.0
+            if age < parameters.retirementAge {
+                contribution = baseContribution * inflationFactor
+                totalBalance += contribution
+            } else {
+                totalBalance -= parameters.annualSpendingInRetirement * inflationFactor
             }
 
-            // Apply life events
-            let eventsThisYear = lifeEvents.filter { event in
-                let eventYear = Calendar.current.dateComponents([.year], from: event.eventDate, to: Date()).year ?? 0
-                return eventYear == year
-            }
-
-            for event in eventsThisYear {
-                if event.type == .housePurchase || event.type == .carPurchase || event.type == .majorExpense || event.type == .medicalExpense {
+            // One-off life events scheduled for this year
+            for event in lifeEvents(parameters.lifeEvents, inYear: year) {
+                switch event.type {
+                case .housePurchase, .carPurchase, .majorExpense, .medicalExpense:
                     totalBalance -= event.amount
-                } else if event.type == .inheritance {
+                case .inheritance:
                     totalBalance += event.amount
+                case .other:
+                    break
                 }
             }
 
-            let growth = totalBalance - balanceBeforeGrowth
-            let contribution = age < retirementAge ? totalAnnualContribution : 0
+            totalBalance = max(0, totalBalance)
 
-            let dataPoint = ProjectionDataPoint(
+            dataPoints.append(ProjectionDataPoint(
                 year: year,
                 age: age,
-                balance: max(0, totalBalance),
+                balance: totalBalance,
                 contribution: contribution,
                 growth: growth
-            )
-
-            dataPoints.append(dataPoint)
-
-            // Check if we've reached retirement age and have enough
-            if age == retirementAge && projectedRetirementAge == nil {
-                projectedRetirementAge = age
-            }
+            ))
         }
 
-        return (dataPoints, max(0, totalBalance), projectedRetirementAge)
+        let projectedBalance = dataPoints.first { $0.age >= parameters.retirementAge }?.balance
+            ?? dataPoints.last?.balance ?? totalBalance
+
+        return (dataPoints, projectedBalance)
     }
 
     // MARK: - Scenario Comparison
@@ -95,104 +88,35 @@ class ProjectionCalculator {
             lifeEvents: parameters.lifeEvents
         )
 
-        let baselineResult = calculateRetirementProjection(
-            accounts: accounts,
-            currentAge: parameters.currentAge,
-            retirementAge: parameters.retirementAge,
-            inflationRate: parameters.inflationRate,
-            assetGrowthRate: parameters.assetGrowthRate,
-            lifeExpectancy: parameters.lifeExpectancy,
-            lifeEvents: parameters.lifeEvents
-        )
-
-        let conservativeResult = calculateRetirementProjection(
-            accounts: accounts,
-            currentAge: conservative.currentAge,
-            retirementAge: conservative.retirementAge,
-            inflationRate: conservative.inflationRate,
-            assetGrowthRate: conservative.assetGrowthRate,
-            lifeExpectancy: conservative.lifeExpectancy,
-            lifeEvents: conservative.lifeEvents
-        )
-
-        let aggressiveResult = calculateRetirementProjection(
-            accounts: accounts,
-            currentAge: aggressive.currentAge,
-            retirementAge: aggressive.retirementAge,
-            inflationRate: aggressive.inflationRate,
-            assetGrowthRate: aggressive.assetGrowthRate,
-            lifeExpectancy: aggressive.lifeExpectancy,
-            lifeEvents: aggressive.lifeEvents
-        )
+        func scenario(_ name: String, _ params: ProjectionParameters) -> ScenarioResult {
+            let result = calculateRetirementProjection(accounts: accounts, parameters: params)
+            return ScenarioResult(
+                name: name,
+                retirementAge: params.retirementAge,
+                projectedBalance: result.projectedBalance,
+                dataPoints: result.projectionDataPoints,
+                assumptions: params
+            )
+        }
 
         return [
-            ScenarioResult(
-                name: "Conservative",
-                retirementAge: conservativeResult.projectedRetirementAge ?? parameters.retirementAge,
-                projectedBalance: conservativeResult.projectedBalance,
-                dataPoints: conservativeResult.projectionDataPoints,
-                assumptions: conservative
-            ),
-            ScenarioResult(
-                name: "Baseline",
-                retirementAge: baselineResult.projectedRetirementAge ?? parameters.retirementAge,
-                projectedBalance: baselineResult.projectedBalance,
-                dataPoints: baselineResult.projectionDataPoints,
-                assumptions: parameters
-            ),
-            ScenarioResult(
-                name: "Aggressive",
-                retirementAge: aggressiveResult.projectedRetirementAge ?? parameters.retirementAge,
-                projectedBalance: aggressiveResult.projectedBalance,
-                dataPoints: aggressiveResult.projectionDataPoints,
-                assumptions: aggressive
-            )
+            scenario("Conservative", conservative),
+            scenario("Baseline", parameters),
+            scenario("Aggressive", aggressive)
         ]
-    }
-
-    // MARK: - Life Event Impact Analysis
-    func calculateLifeEventImpact(
-        accounts: [Account],
-        parameters: ProjectionParameters,
-        lifeEvent: LifeEvent
-    ) -> (impactAmount: Double, balanceWithoutEvent: Double, balanceWithEvent: Double) {
-
-        let withoutEvent = calculateRetirementProjection(
-            accounts: accounts,
-            currentAge: parameters.currentAge,
-            retirementAge: parameters.retirementAge,
-            inflationRate: parameters.inflationRate,
-            assetGrowthRate: parameters.assetGrowthRate,
-            lifeExpectancy: parameters.lifeExpectancy,
-            lifeEvents: []
-        )
-
-        let withEvent = calculateRetirementProjection(
-            accounts: accounts,
-            currentAge: parameters.currentAge,
-            retirementAge: parameters.retirementAge,
-            inflationRate: parameters.inflationRate,
-            assetGrowthRate: parameters.assetGrowthRate,
-            lifeExpectancy: parameters.lifeExpectancy,
-            lifeEvents: [lifeEvent]
-        )
-
-        let impact = withoutEvent.projectedBalance - withEvent.projectedBalance
-
-        return (impactAmount: impact, balanceWithoutEvent: withoutEvent.projectedBalance, balanceWithEvent: withEvent.projectedBalance)
     }
 
     // MARK: - Account Distribution Analysis
     func analyzeAccountDistribution(accounts: [Account]) -> AccountDistributionAnalysis {
-        let totalBalance = accounts.reduce(0) { $0 + $1.currentBalance }
+        let totalBalance = accounts.totalBalance
 
         var distribution: [String: Double] = [:]
-        var percentageDistribution: [String: Double] = [:]
-
         for account in accounts {
-            let key = account.type.displayName
-            distribution[key, default: 0] += account.currentBalance
-            percentageDistribution[key, default: 0] += (account.currentBalance / totalBalance) * 100
+            distribution[account.type.displayName, default: 0] += account.currentBalance
+        }
+
+        let percentageDistribution = distribution.mapValues { balance in
+            totalBalance > 0 ? (balance / totalBalance) * 100 : 0
         }
 
         return AccountDistributionAnalysis(
@@ -203,36 +127,12 @@ class ProjectionCalculator {
     }
 
     // MARK: - Helper Methods
-    private func calculateWeightedAverageROI(accounts: [Account]) -> Double {
-        let totalBalance = accounts.reduce(0) { $0 + $1.currentBalance }
-
-        guard totalBalance > 0 else { return 5.0 }
-
-        let weightedROI = accounts.reduce(0) { sum, account in
-            sum + (account.expectedROI * (account.currentBalance / totalBalance))
+    /// Life events whose date falls `year` years from today.
+    private func lifeEvents(_ events: [LifeEvent], inYear year: Int) -> [LifeEvent] {
+        events.filter { event in
+            let yearsFromNow = Calendar.current.dateComponents([.year], from: Date(), to: event.eventDate).year ?? -1
+            return yearsFromNow == year
         }
-
-        return weightedROI
-    }
-
-    func estimateRetirementDate(
-        accounts: [Account],
-        targetAmount: Double,
-        currentAge: Int,
-        annualContribution: Double,
-        expectedROI: Double
-    ) -> Int? {
-        var balance = accounts.reduce(0) { $0 + $1.currentBalance }
-        let growthRate = expectedROI / 100.0
-
-        for year in 0...100 {
-            if balance >= targetAmount {
-                return currentAge + year
-            }
-            balance = balance * (1 + growthRate) + annualContribution
-        }
-
-        return nil
     }
 }
 
