@@ -4,6 +4,7 @@ struct DataInputView: View {
     @State private var accounts: [Account] = []
     @State private var showAddAccountSheet = false
     @State private var showUpdateBalanceSheet = false
+    @State private var showHistorySheet = false
     @State private var selectedAccount: Account?
     @State private var accountHistory: [AccountHistory] = []
     @State private var accountToDelete: Account?
@@ -68,7 +69,8 @@ struct DataInputView: View {
 
                                     Button(action: {
                                         selectedAccount = account
-                                        loadAccountHistory()
+                                        loadAccountHistory(for: account)
+                                        showHistorySheet = true
                                     }) {
                                         Label("History", systemImage: "clock.fill")
                                             .font(.subheadline)
@@ -119,17 +121,29 @@ struct DataInputView: View {
                 if let account = selectedAccount {
                     UpdateBalanceView(account: account, isPresented: $showUpdateBalanceSheet) { actualBalance in
                         do {
+                            // Record the change in history, keeping the prior balance as the "projected" value.
                             let entry = AccountHistory(
                                 accountId: account.id,
                                 actualBalance: actualBalance,
                                 projectedBalance: account.currentBalance
                             )
                             try historyService.addHistoryEntry(entry)
+
+                            // Update the account's current balance to the new value.
+                            var updated = account
+                            updated.currentBalance = actualBalance
+                            try accountService.updateAccount(updated)
+
                             loadAccounts()
                         } catch {
                             print("Error updating balance: \(error)")
                         }
                     }
+                }
+            }
+            .sheet(isPresented: $showHistorySheet) {
+                if let account = selectedAccount {
+                    AccountHistoryView(account: account, history: accountHistory, isPresented: $showHistorySheet)
                 }
             }
             .alert("Delete Account?", isPresented: $showDeleteConfirmation, presenting: accountToDelete) { account in
@@ -172,8 +186,7 @@ struct DataInputView: View {
         loadAccounts()
     }
 
-    private func loadAccountHistory() {
-        guard let account = selectedAccount else { return }
+    private func loadAccountHistory(for account: Account) {
         do {
             accountHistory = try historyService.getHistoryForAccount(accountId: account.id)
         } catch {

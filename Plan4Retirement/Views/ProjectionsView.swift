@@ -376,6 +376,8 @@ struct ProjectionsView: View {
                 parametersUsed: parameters
             )
 
+            // Honor the user-configured retention limit.
+            snapshotService.setMaxSnapshots(settings.maxProjectionSnapshots)
             try snapshotService.saveSnapshot(snapshot)
             loadData()
         } catch {

@@ -58,23 +58,24 @@ struct RetirementLineChart: View {
                 emptyStateView()
             } else {
                 // Chart. Detail requires a press-and-hold so a plain drag still scrolls.
-                ZStack {
-                    canvas
-                        .gesture(
-                            LongPressGesture(minimumDuration: 0.2)
-                                .sequenced(before: DragGesture(minimumDistance: 0))
-                                .onChanged { value in
-                                    if case .second(true, let drag?) = value {
-                                        let frame = CGRect(x: 0, y: 0, width: 300, height: height)
-                                        updateSelectedIndex(at: drag.location, in: frame)
+                GeometryReader { geo in
+                    ZStack {
+                        canvas
+                            .gesture(
+                                LongPressGesture(minimumDuration: 0.2)
+                                    .sequenced(before: DragGesture(minimumDistance: 0))
+                                    .onChanged { value in
+                                        if case .second(true, let drag?) = value {
+                                            updateSelectedIndex(at: drag.location, in: geo.size)
+                                        }
                                     }
-                                }
-                                .onEnded { _ in selectedIndex = nil }
-                        )
+                                    .onEnded { _ in selectedIndex = nil }
+                            )
 
-                    // Tooltip while holding
-                    if let index = selectedIndex, index < filteredData.count {
-                        tooltipView(for: filteredData[index])
+                        // Tooltip while holding
+                        if let index = selectedIndex, index < filteredData.count {
+                            tooltipView(for: filteredData[index])
+                        }
                     }
                 }
                 .frame(height: height)
@@ -275,11 +276,12 @@ struct RetirementLineChart: View {
     }
 
     // MARK: - Helpers
-    private func updateSelectedIndex(at location: CGPoint, in frame: CGRect) {
+    private func updateSelectedIndex(at location: CGPoint, in size: CGSize) {
         let padding: CGFloat = 50
-        let chartWidth = frame.width - (padding * 2)
+        let chartWidth = size.width - (padding * 2)
+        guard chartWidth > 0 else { return }
         let normalizedX = (location.x - padding) / chartWidth
-        let index = Int(normalizedX * CGFloat(filteredData.count - 1))
+        let index = Int((normalizedX * CGFloat(filteredData.count - 1)).rounded())
 
         if index >= 0 && index < filteredData.count {
             selectedIndex = index
