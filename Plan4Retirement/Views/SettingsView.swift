@@ -34,7 +34,7 @@ struct SettingsView: View {
 
                 Section("Graph Display") {
                     StepperField(
-                        title: "Months Shown (Monthly)",
+                        title: "Points Shown (Monthly)",
                         text: $monthsText,
                         range: 10...200,
                         focus: $inputActive,
@@ -44,7 +44,7 @@ struct SettingsView: View {
                     .onChange(of: monthsText) { _ in commit() }
 
                     StepperField(
-                        title: "Years Shown (Yearly)",
+                        title: "Points Shown (Yearly)",
                         text: $yearsText,
                         range: 10...200,
                         focus: $inputActive,

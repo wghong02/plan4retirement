@@ -1,5 +1,9 @@
 import SwiftUI
 
+/// Shared trailing-accessory width so `StepperField` (stepper) and `DecimalField`
+/// (suffix) line up their input columns identically.
+private let fieldAccessoryWidth: CGFloat = 96
+
 /// Integer entry that supports both direct typing and +/- stepper buttons,
 /// with an inline red warning when the value is out of range.
 struct StepperField: View {
@@ -21,6 +25,7 @@ struct StepperField: View {
                     .focused(focus)
                 Stepper("", onIncrement: { adjust(1) }, onDecrement: { adjust(-1) })
                     .labelsHidden()
+                    .frame(width: fieldAccessoryWidth, alignment: .trailing)
             }
             if !isValid {
                 Text(errorMessage)
@@ -56,10 +61,10 @@ struct DecimalField: View {
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
                     .focused(focus)
-                if let suffix {
-                    Text(suffix)
-                        .foregroundColor(.gray)
-                }
+                // Reserve the same width the stepper occupies so both sections align.
+                Text(suffix ?? "")
+                    .foregroundColor(.gray)
+                    .frame(width: fieldAccessoryWidth, alignment: .leading)
             }
             if !isValid {
                 Text(errorMessage)

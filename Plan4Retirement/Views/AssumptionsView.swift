@@ -57,9 +57,9 @@ struct AssumptionsView: View {
                     .onChange(of: lifeExpectancyText) { _ in commit() }
                 }
 
-                Section("Economic Assumptions") {
+                Section("Economic Assumptions (Annual)") {
                     DecimalField(
-                        title: "Annual Inflation Rate",
+                        title: "Inflation Rate",
                         text: $inflationText,
                         suffix: "%",
                         focus: $inputActive,
@@ -79,7 +79,7 @@ struct AssumptionsView: View {
                     .onChange(of: growthText) { _ in capDecimals(&growthText); commit() }
 
                     DecimalField(
-                        title: "Contribution Annual Increase",
+                        title: "Contribution Increase",
                         text: $contributionIncreaseText,
                         suffix: "%",
                         focus: $inputActive,
@@ -89,7 +89,7 @@ struct AssumptionsView: View {
                     .onChange(of: contributionIncreaseText) { _ in capDecimals(&contributionIncreaseText); commit() }
 
                     DecimalField(
-                        title: "Annual Spending in Retirement",
+                        title: "Spending in Retirement",
                         text: $spendingText,
                         suffix: "USD",
                         focus: $inputActive,
