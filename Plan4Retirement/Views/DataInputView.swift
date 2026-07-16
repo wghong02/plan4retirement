@@ -15,13 +15,15 @@ struct DataInputView: View {
     /// selected account isn't ready when the sheet content is first built.
     private enum ActiveSheet: Identifiable {
         case add
+        case updateDetails(Account)
         case updateBalance(Account)
         case history(Account)
 
         var id: String {
             switch self {
             case .add: return "add"
-            case .updateBalance(let account): return "update-\(account.id)"
+            case .updateDetails(let account): return "details-\(account.id)"
+            case .updateBalance(let account): return "balance-\(account.id)"
             case .history(let account): return "history-\(account.id)"
             }
         }
@@ -54,6 +56,7 @@ struct DataInputView: View {
                     List {
                         ForEach(accounts) { account in
                             VStack(alignment: .leading, spacing: 8) {
+                                // Tapping the account info opens the details editor.
                                 HStack {
                                     VStack(alignment: .leading) {
                                         Text(account.name)
@@ -77,6 +80,14 @@ struct DataInputView: View {
                                             .font(.subheadline)
                                             .foregroundColor(.gray)
                                     }
+
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                }
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    activeSheet = .updateDetails(account)
                                 }
 
                                 HStack(spacing: 12) {
@@ -147,27 +158,40 @@ struct DataInputView: View {
                         }
                     }
 
-                case .updateBalance(let account):
-                    UpdateBalanceView(account: account, isPresented: sheetPresented) { actualBalance, date, notes in
+                case .updateDetails(let account):
+                    UpdateDetailsView(account: account, isPresented: sheetPresented) { updated in
                         do {
-                            // Record the change in history, keeping the prior balance as the "projected" value.
-                            let entry = AccountHistory(
-                                accountId: account.id,
-                                actualBalance: actualBalance,
-                                projectedBalance: account.currentBalance,
-                                updateDate: date,
-                                notes: notes
-                            )
-                            try historyService.addHistoryEntry(entry)
-
-                            // Reflect the latest-dated update as the account's current balance.
-                            try accountService.syncCurrentBalanceFromHistory(accountId: account.id)
-
+                            try accountService.updateAccount(updated)
                             loadAccounts()
                         } catch {
-                            print("Error updating balance: \(error)")
+                            print("Error updating account details: \(error)")
                         }
                     }
+
+                case .updateBalance(let account):
+                    UpdateBalanceView(
+                        account: account,
+                        isPresented: sheetPresented,
+                        onSave: { balance, date, notes in
+                            do {
+                                let entry = AccountHistory(
+                                    accountId: account.id,
+                                    actualBalance: balance,
+                                    projectedBalance: account.currentBalance,
+                                    updateDate: date,
+                                    notes: notes
+                                )
+                                try historyService.addHistoryEntry(entry)
+                                try accountService.syncCurrentBalanceFromHistory(accountId: account.id)
+                                loadAccounts()
+                            } catch {
+                                print("Error updating balance: \(error)")
+                            }
+                        },
+                        duplicateCheck: { balance, date, notes in
+                            isDuplicateHistory(accountId: account.id, balance: balance, date: date, notes: notes)
+                        }
+                    )
 
                 case .history(let account):
                     AccountHistoryView(account: account, isPresented: sheetPresented)
@@ -198,6 +222,16 @@ struct DataInputView: View {
             lastUpdateDates = dates
         } catch {
             print("Error loading accounts: \(error)")
+        }
+    }
+
+    /// True when a history entry with the same balance, day, and note already exists.
+    private func isDuplicateHistory(accountId: String, balance: Double, date: Date, notes: String?) -> Bool {
+        let existing = (try? historyService.getHistoryForAccount(accountId: accountId)) ?? []
+        return existing.contains { entry in
+            entry.actualBalance == balance
+                && Calendar.current.isDate(entry.updateDate, inSameDayAs: date)
+                && (entry.notes ?? "") == (notes ?? "")
         }
     }
 

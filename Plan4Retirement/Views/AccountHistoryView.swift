@@ -88,7 +88,15 @@ struct AccountHistoryView: View {
                     onDelete: history.count > 1 ? {
                         delete(entry)
                         editingEntry = nil
-                    } : nil
+                    } : nil,
+                    duplicateCheck: { balance, date, notes in
+                        history.contains { other in
+                            other.id != entry.id
+                                && other.actualBalance == balance
+                                && Calendar.current.isDate(other.updateDate, inSameDayAs: date)
+                                && (other.notes ?? "") == (notes ?? "")
+                        }
+                    }
                 )
             }
         }

@@ -1,0 +1,95 @@
+import SwiftUI
+
+/// Edits an account's details (name, tax treatment, growth/ROI, contribution increase).
+/// Balance changes are handled separately by `UpdateBalanceView`.
+struct UpdateDetailsView: View {
+    let account: Account
+    @Binding var isPresented: Bool
+    var onSave: (Account) -> Void
+
+    @State private var name: String
+    @State private var type: AccountType
+    @State private var roi: String
+    @State private var contributionIncrease: String
+
+    init(
+        account: Account,
+        isPresented: Binding<Bool>,
+        onSave: @escaping (Account) -> Void
+    ) {
+        self.account = account
+        self._isPresented = isPresented
+        self.onSave = onSave
+        _name = State(initialValue: account.name)
+        _type = State(initialValue: account.type)
+        _roi = State(initialValue: Self.numberString(account.expectedROI))
+        _contributionIncrease = State(initialValue: Self.numberString(account.contributionIncreaseRate))
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Account Details") {
+                    TextField("Account Name", text: $name)
+
+                    Picker("Tax Treatment", selection: $type) {
+                        ForEach(AccountType.allCases, id: \.self) { type in
+                            Text(type.displayName).tag(type)
+                        }
+                    }
+
+                    TextField("Expected Annual Growth / ROI (%)", text: $roi)
+                        .keyboardType(.decimalPad)
+
+                    TextField("Annual Contribution Increase (%)", text: $contributionIncrease)
+                        .keyboardType(.decimalPad)
+                }
+            }
+            .navigationTitle("Update Details")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        isPresented = false
+                    }
+                }
+
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        save()
+                    }
+                    .disabled(name.isEmpty)
+                }
+            }
+        }
+    }
+
+    private func save() {
+        var updated = account
+        updated.name = name
+        updated.type = type
+        updated.expectedROI = Double(roi) ?? account.expectedROI
+        updated.contributionIncreaseRate = Double(contributionIncrease) ?? account.contributionIncreaseRate
+
+        onSave(updated)
+        isPresented = false
+    }
+
+    /// Whole numbers show without a trailing ".0" when pre-filling.
+    private static func numberString(_ value: Double) -> String {
+        value == value.rounded() ? String(Int(value)) : String(value)
+    }
+}
+
+#Preview {
+    UpdateDetailsView(
+        account: Account(
+            name: "401(k)",
+            type: .preTax,
+            currentBalance: 100000,
+            annualContribution: 10000,
+            expectedROI: 7.0
+        ),
+        isPresented: .constant(true)
+    ) { _ in }
+}
