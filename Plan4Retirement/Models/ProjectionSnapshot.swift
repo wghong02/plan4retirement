@@ -64,8 +64,6 @@ struct ProjectionParameters: Codable {
     var currentAge: Int
     var retirementAge: Int
     var inflationRate: Double // e.g., 2.5
-    var assetGrowthRate: Double // e.g., 7.0
-    var annualContributionIncreaseRate: Double // e.g., 2.0 (% raise applied to contributions each year)
     var lifeExpectancy: Int
     var annualSpendingInRetirement: Double
     var lifeEvents: [LifeEvent]
@@ -74,8 +72,6 @@ struct ProjectionParameters: Codable {
         currentAge: Int = 30,
         retirementAge: Int = 67,
         inflationRate: Double = 2.5,
-        assetGrowthRate: Double = 7.0,
-        annualContributionIncreaseRate: Double = 2.0,
         lifeExpectancy: Int = 95,
         annualSpendingInRetirement: Double = 50000,
         lifeEvents: [LifeEvent] = []
@@ -83,8 +79,6 @@ struct ProjectionParameters: Codable {
         self.currentAge = currentAge
         self.retirementAge = retirementAge
         self.inflationRate = inflationRate
-        self.assetGrowthRate = assetGrowthRate
-        self.annualContributionIncreaseRate = annualContributionIncreaseRate
         self.lifeExpectancy = lifeExpectancy
         self.annualSpendingInRetirement = annualSpendingInRetirement
         self.lifeEvents = lifeEvents

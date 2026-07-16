@@ -15,13 +15,13 @@ class ProjectionCalculator {
     ) -> (projectionDataPoints: [ProjectionDataPoint], projectedBalance: Double) {
 
         var dataPoints: [ProjectionDataPoint] = []
-        var totalBalance = accounts.totalBalance
-        let baseAnnualContribution = accounts.reduce(0) { $0 + $1.annualContribution }
 
-        // Convert annual rates into their monthly-compounding equivalents.
-        let monthlyGrowthRate = pow(1 + parameters.assetGrowthRate / 100.0, 1.0 / 12.0) - 1
+        // Each account grows and contributes at its own rate; the total is the sum.
+        var balances = accounts.map(\.currentBalance)
+        let monthlyGrowth = accounts.map { pow(1 + $0.expectedROI / 100.0, 1.0 / 12.0) - 1 }
+        let baseContribution = accounts.map(\.annualContribution)
+        let contributionIncrease = accounts.map { $0.contributionIncreaseRate / 100.0 }
         let inflationRate = parameters.inflationRate / 100.0
-        let contributionIncreaseRate = parameters.annualContributionIncreaseRate / 100.0
 
         let lifeHorizon = max(0, parameters.lifeExpectancy - parameters.currentAge) * 12
         let totalMonths = max(lifeHorizon, horizonMonths ?? 0)
@@ -31,7 +31,7 @@ class ProjectionCalculator {
         dataPoints.append(ProjectionDataPoint(
             monthIndex: 0,
             age: parameters.currentAge,
-            balance: totalBalance,
+            balance: balances.reduce(0, +),
             contribution: 0,
             growth: 0
         ))
@@ -40,52 +40,76 @@ class ProjectionCalculator {
             for month in 1...totalMonths {
                 let year = month / 12
                 let age = parameters.currentAge + year
-                let balanceBeforeGrowth = totalBalance
+                let working = age < parameters.retirementAge
 
-                // Investment growth
-                totalBalance *= (1 + monthlyGrowthRate)
-                let growth = balanceBeforeGrowth * monthlyGrowthRate
+                var monthGrowth = 0.0
+                var monthContribution = 0.0
 
-                // Cash flow: contribute (with annual raises) while working, draw down
-                // inflation-adjusted spending once retired.
-                var contribution = 0.0
-                if age < parameters.retirementAge {
-                    let annualContribution = baseAnnualContribution * pow(1 + contributionIncreaseRate, Double(year))
-                    contribution = annualContribution / 12.0
-                    totalBalance += contribution
-                } else {
-                    let annualSpending = parameters.annualSpendingInRetirement * pow(1 + inflationRate, Double(year))
-                    totalBalance -= annualSpending / 12.0
+                // Grow and contribute per account.
+                for i in accounts.indices {
+                    let before = balances[i]
+                    balances[i] *= (1 + monthlyGrowth[i])
+                    monthGrowth += before * monthlyGrowth[i]
+
+                    if working {
+                        let annual = baseContribution[i] * pow(1 + contributionIncrease[i], Double(year))
+                        let monthly = annual / 12.0
+                        balances[i] += monthly
+                        monthContribution += monthly
+                    }
                 }
 
-                // One-off life events scheduled for this month
+                // Retirement drawdown (inflation-adjusted), allocated across accounts by balance.
+                if !working {
+                    let spending = parameters.annualSpendingInRetirement * pow(1 + inflationRate, Double(year)) / 12.0
+                    allocate(-spending, across: &balances)
+                }
+
+                // One-off life events for this month, allocated across accounts by balance.
                 for event in lifeEvents(parameters.lifeEvents, inMonth: month) {
                     switch event.type {
                     case .housePurchase, .carPurchase, .majorExpense, .medicalExpense:
-                        totalBalance -= event.amount
+                        allocate(-event.amount, across: &balances)
                     case .inheritance:
-                        totalBalance += event.amount
+                        allocate(event.amount, across: &balances)
                     case .other:
                         break
                     }
                 }
 
-                totalBalance = max(0, totalBalance)
+                for i in balances.indices {
+                    balances[i] = max(0, balances[i])
+                }
 
                 dataPoints.append(ProjectionDataPoint(
                     monthIndex: month,
                     age: age,
-                    balance: totalBalance,
-                    contribution: contribution,
-                    growth: growth
+                    balance: balances.reduce(0, +),
+                    contribution: monthContribution,
+                    growth: monthGrowth
                 ))
             }
         }
 
         let projectedBalance = dataPoints.first { $0.age >= parameters.retirementAge }?.balance
-            ?? dataPoints.last?.balance ?? totalBalance
+            ?? dataPoints.last?.balance ?? balances.reduce(0, +)
 
         return (dataPoints, projectedBalance)
+    }
+
+    /// Distributes a household-level amount (positive or negative) across account
+    /// balances in proportion to their size. Falls back to the first account when
+    /// the total is zero.
+    private func allocate(_ amount: Double, across balances: inout [Double]) {
+        guard amount != 0, !balances.isEmpty else { return }
+        let total = balances.reduce(0, +)
+        if total > 0 {
+            for i in balances.indices {
+                balances[i] += amount * (balances[i] / total)
+            }
+        } else {
+            balances[0] += amount
+        }
     }
 
     // MARK: - Account Distribution Analysis

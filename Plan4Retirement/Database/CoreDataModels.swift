@@ -10,6 +10,7 @@ public class AccountEntity: NSManagedObject, Identifiable {
     @NSManaged public var currentBalance: Double
     @NSManaged public var annualContribution: Double
     @NSManaged public var expectedROI: Double
+    @NSManaged public var contributionIncreaseRate: Double
     @NSManaged public var createdDate: Date
     @NSManaged public var lastUpdatedDate: Date
     @NSManaged public var histories: NSSet?
@@ -22,6 +23,7 @@ public class AccountEntity: NSManagedObject, Identifiable {
             currentBalance: currentBalance,
             annualContribution: annualContribution,
             expectedROI: expectedROI,
+            contributionIncreaseRate: contributionIncreaseRate,
             createdDate: createdDate,
             lastUpdatedDate: lastUpdatedDate
         )
@@ -35,6 +37,7 @@ public class AccountEntity: NSManagedObject, Identifiable {
         entity.currentBalance = account.currentBalance
         entity.annualContribution = account.annualContribution
         entity.expectedROI = account.expectedROI
+        entity.contributionIncreaseRate = account.contributionIncreaseRate
         entity.createdDate = account.createdDate
         entity.lastUpdatedDate = account.lastUpdatedDate
         return entity

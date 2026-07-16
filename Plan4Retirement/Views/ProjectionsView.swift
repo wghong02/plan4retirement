@@ -6,6 +6,7 @@ struct ProjectionsView: View {
     @State private var accounts: [Account] = []
     @State private var projection: (projectionDataPoints: [ProjectionDataPoint], projectedBalance: Double)? = nil
     @State private var parameters: ProjectionParameters? = nil
+    @State private var actualSeries: [ProjectionDataPoint] = []
     @State private var savedSnapshots: [ProjectionSnapshot] = []
     @State private var showSaveSnapshot = false
     @State private var filterMode: FilterMode = .current
@@ -17,6 +18,7 @@ struct ProjectionsView: View {
     private let calculator = ProjectionCalculator()
     private let lifeEventService = LifeEventService()
     private let snapshotService = ProjectionSnapshotService()
+    private let historyService = AccountHistoryService()
 
     enum FilterMode {
         case current
@@ -94,6 +96,7 @@ struct ProjectionsView: View {
             if let projection, let parameters {
                 RetirementLineChart(
                     dataPoints: projection.projectionDataPoints,
+                    actualDataPoints: actualSeries,
                     title: "Retirement Growth Projection",
                     maxMonths: settings.maxMonthsDisplayed,
                     maxYears: settings.maxYearsDisplayed,
@@ -115,10 +118,10 @@ struct ProjectionsView: View {
                     }
 
                     HStack {
-                        Text("\(rateLabelPrefix) Growth Rate")
+                        Text("\(rateLabelPrefix) Avg Growth Rate")
                             .font(.subheadline)
                         Spacer()
-                        Text(periodRate(parameters.assetGrowthRate).formattedAsPercentage())
+                        Text(periodRate(weightedRate(\.expectedROI)).formattedAsPercentage())
                             .font(.subheadline)
                     }
 
@@ -131,10 +134,10 @@ struct ProjectionsView: View {
                     }
 
                     HStack {
-                        Text("\(rateLabelPrefix) Contribution Increase")
+                        Text("\(rateLabelPrefix) Avg Contribution Increase")
                             .font(.subheadline)
                         Spacer()
-                        Text(periodRate(parameters.annualContributionIncreaseRate).formattedAsPercentage())
+                        Text(periodRate(weightedRate(\.contributionIncreaseRate)).formattedAsPercentage())
                             .font(.subheadline)
                     }
                 }
@@ -323,6 +326,16 @@ struct ProjectionsView: View {
         settings.showInflationAdjusted ? " (today's $)" : ""
     }
 
+    /// Balance-weighted average of a per-account rate (e.g. ROI or contribution increase).
+    private func weightedRate(_ keyPath: KeyPath<Account, Double>) -> Double {
+        let total = accounts.totalBalance
+        guard total > 0 else {
+            guard !accounts.isEmpty else { return 0 }
+            return accounts.reduce(0) { $0 + $1[keyPath: keyPath] } / Double(accounts.count)
+        }
+        return accounts.reduce(0) { $0 + $1[keyPath: keyPath] * ($1.currentBalance / total) }
+    }
+
     /// Deflates a future amount to today's dollars when the setting is on.
     private func todaysDollars(_ amount: Double, yearsFromNow: Int, inflationRate: Double) -> Double {
         guard settings.showInflationAdjusted, inflationRate != 0 else { return amount }
@@ -348,6 +361,43 @@ struct ProjectionsView: View {
         return savedSnapshots.first?.name ?? "Select Projection"
     }
 
+    /// Aggregates recorded account balances into a monthly total series over the past,
+    /// using each account's latest history entry as of each month. monthIndex is 0 at
+    /// the current month and negative for earlier months.
+    private func buildActualSeries(accounts: [Account], histories: [String: [AccountHistory]], currentAge: Int) -> [ProjectionDataPoint] {
+        let cal = Calendar.current
+        let now = Date()
+        let nowMonths = cal.component(.year, from: now) * 12 + (cal.component(.month, from: now) - 1)
+
+        func monthOffset(_ date: Date) -> Int {
+            let m = cal.component(.year, from: date) * 12 + (cal.component(.month, from: date) - 1)
+            return m - nowMonths
+        }
+
+        // Earliest recorded month across all accounts (0 or negative).
+        var earliest = 0
+        for entries in histories.values {
+            for entry in entries {
+                earliest = min(earliest, monthOffset(entry.updateDate))
+            }
+        }
+        guard earliest < 0 else { return [] } // no past history to show
+
+        var series: [ProjectionDataPoint] = []
+        for month in stride(from: earliest, through: 0, by: 1) {
+            var total = 0.0
+            for account in accounts {
+                // Histories are sorted newest-first; take the latest entry on or before this month.
+                if let latest = histories[account.id]?.first(where: { monthOffset($0.updateDate) <= month }) {
+                    total += latest.actualBalance
+                }
+            }
+            let year = Int(floor(Double(month) / 12.0))
+            series.append(ProjectionDataPoint(monthIndex: month, age: currentAge + year, balance: total, contribution: 0, growth: 0))
+        }
+        return series
+    }
+
     // MARK: - Data Loading
     private func loadData() {
         do {
@@ -365,6 +415,13 @@ struct ProjectionsView: View {
                 parameters: params,
                 horizonMonths: horizonMonths
             )
+
+            // Actual recorded balances (past) to overlay on the projection.
+            var historiesByAccount: [String: [AccountHistory]] = [:]
+            for account in accounts {
+                historiesByAccount[account.id] = (try? historyService.getHistoryForAccount(accountId: account.id)) ?? []
+            }
+            actualSeries = buildActualSeries(accounts: accounts, histories: historiesByAccount, currentAge: params.currentAge)
 
             // Set default selected snapshot
             if selectedSnapshotId == nil, let first = savedSnapshots.first {

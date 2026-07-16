@@ -118,8 +118,6 @@ struct DashboardView: View {
             .onReceive(settings.$currentAge) { _ in loadData() }
             .onReceive(settings.$retirementAge) { _ in loadData() }
             .onReceive(settings.$inflationRate) { _ in loadData() }
-            .onReceive(settings.$assetGrowthRate) { _ in loadData() }
-            .onReceive(settings.$annualContributionIncreaseRate) { _ in loadData() }
             .onReceive(settings.$annualSpendingInRetirement) { _ in loadData() }
             .onReceive(settings.$lifeExpectancy) { _ in loadData() }
         }

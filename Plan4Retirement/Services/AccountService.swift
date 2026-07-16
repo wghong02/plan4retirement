@@ -48,6 +48,7 @@ class AccountService {
         entity.currentBalance = account.currentBalance
         entity.annualContribution = account.annualContribution
         entity.expectedROI = account.expectedROI
+        entity.contributionIncreaseRate = account.contributionIncreaseRate
         entity.lastUpdatedDate = Date()
 
         try context.save()

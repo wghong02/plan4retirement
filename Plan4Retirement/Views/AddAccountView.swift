@@ -9,6 +9,7 @@ struct AddAccountView: View {
     @State private var currentBalance: String = ""
     @State private var annualContribution: String = ""
     @State private var expectedROI: String = "7.0"
+    @State private var contributionIncreaseRate: String = "2.0"
 
     var body: some View {
         NavigationStack {
@@ -30,7 +31,10 @@ struct AddAccountView: View {
                     TextField("Annual Contribution", text: $annualContribution)
                         .keyboardType(.decimalPad)
 
-                    TextField("Expected Annual ROI (%)", text: $expectedROI)
+                    TextField("Expected Annual Growth / ROI (%)", text: $expectedROI)
+                        .keyboardType(.decimalPad)
+
+                    TextField("Annual Contribution Increase (%)", text: $contributionIncreaseRate)
                         .keyboardType(.decimalPad)
                 }
             }
@@ -61,13 +65,15 @@ struct AddAccountView: View {
         let balance = Double(currentBalance) ?? 0
         let contribution = Double(annualContribution) ?? 0
         let roi = Double(expectedROI) ?? 0
+        let increase = Double(contributionIncreaseRate) ?? 0
 
         let account = Account(
             name: name,
             type: selectedType,
             currentBalance: balance,
             annualContribution: contribution,
-            expectedROI: roi
+            expectedROI: roi,
+            contributionIncreaseRate: increase
         )
 
         onSave(account)

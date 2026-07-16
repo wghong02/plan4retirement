@@ -11,8 +11,6 @@ struct AssumptionsView: View {
     @State private var retirementAgeText = ""
     @State private var lifeExpectancyText = ""
     @State private var inflationText = ""
-    @State private var growthText = ""
-    @State private var contributionIncreaseText = ""
     @State private var spendingText = ""
 
     @FocusState private var inputActive: Bool
@@ -67,26 +65,6 @@ struct AssumptionsView: View {
                         errorMessage: rateError
                     )
                     .onChange(of: inflationText) { _ in capDecimals(&inflationText); commit() }
-
-                    DecimalField(
-                        title: "Asset Growth Rate",
-                        text: $growthText,
-                        suffix: "%",
-                        focus: $inputActive,
-                        isValid: growth != nil,
-                        errorMessage: rateError
-                    )
-                    .onChange(of: growthText) { _ in capDecimals(&growthText); commit() }
-
-                    DecimalField(
-                        title: "Contribution Increase",
-                        text: $contributionIncreaseText,
-                        suffix: "%",
-                        focus: $inputActive,
-                        isValid: contributionIncrease != nil,
-                        errorMessage: rateError
-                    )
-                    .onChange(of: contributionIncreaseText) { _ in capDecimals(&contributionIncreaseText); commit() }
 
                     DecimalField(
                         title: "Spending in Retirement",
@@ -186,8 +164,6 @@ struct AssumptionsView: View {
     }
 
     private var inflation: Double? { validRate(inflationText) }
-    private var growth: Double? { validRate(growthText) }
-    private var contributionIncrease: Double? { validRate(contributionIncreaseText) }
 
     private var spending: Double? {
         guard let value = Double(spendingText), value >= 0 else { return nil }
@@ -205,8 +181,6 @@ struct AssumptionsView: View {
         retirementAgeText = "\(settings.retirementAge)"
         lifeExpectancyText = "\(settings.lifeExpectancy)"
         inflationText = formatRate(settings.inflationRate)
-        growthText = formatRate(settings.assetGrowthRate)
-        contributionIncreaseText = formatRate(settings.annualContributionIncreaseRate)
         spendingText = "\(Int(settings.annualSpendingInRetirement))"
     }
 
@@ -216,8 +190,6 @@ struct AssumptionsView: View {
         if let retirementAge { settings.retirementAge = retirementAge }
         if let lifeExpectancy { settings.lifeExpectancy = lifeExpectancy }
         if let inflation { settings.inflationRate = inflation }
-        if let growth { settings.assetGrowthRate = growth }
-        if let contributionIncrease { settings.annualContributionIncreaseRate = contributionIncrease }
         if let spending { settings.annualSpendingInRetirement = spending }
     }
 

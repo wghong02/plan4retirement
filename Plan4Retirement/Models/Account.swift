@@ -6,12 +6,13 @@ struct Account: Identifiable, Codable {
     var type: AccountType
     var currentBalance: Double
     var annualContribution: Double
-    var expectedROI: Double // Annual return as percentage (e.g., 7.0 for 7%)
+    var expectedROI: Double // Annual growth as percentage (e.g., 7.0 for 7%)
+    var contributionIncreaseRate: Double // Annual raise applied to contributions (e.g., 2.0 for 2%)
     let createdDate: Date
     var lastUpdatedDate: Date
 
     enum CodingKeys: String, CodingKey {
-        case id, name, type, currentBalance, annualContribution, expectedROI, createdDate, lastUpdatedDate
+        case id, name, type, currentBalance, annualContribution, expectedROI, contributionIncreaseRate, createdDate, lastUpdatedDate
     }
 
     init(
@@ -19,7 +20,8 @@ struct Account: Identifiable, Codable {
         type: AccountType,
         currentBalance: Double,
         annualContribution: Double,
-        expectedROI: Double
+        expectedROI: Double,
+        contributionIncreaseRate: Double = 0
     ) {
         self.id = UUID().uuidString
         self.name = name
@@ -27,6 +29,7 @@ struct Account: Identifiable, Codable {
         self.currentBalance = currentBalance
         self.annualContribution = annualContribution
         self.expectedROI = expectedROI
+        self.contributionIncreaseRate = contributionIncreaseRate
         self.createdDate = Date()
         self.lastUpdatedDate = Date()
     }
@@ -39,6 +42,7 @@ struct Account: Identifiable, Codable {
         currentBalance: Double,
         annualContribution: Double,
         expectedROI: Double,
+        contributionIncreaseRate: Double,
         createdDate: Date,
         lastUpdatedDate: Date
     ) {
@@ -48,6 +52,7 @@ struct Account: Identifiable, Codable {
         self.currentBalance = currentBalance
         self.annualContribution = annualContribution
         self.expectedROI = expectedROI
+        self.contributionIncreaseRate = contributionIncreaseRate
         self.createdDate = createdDate
         self.lastUpdatedDate = lastUpdatedDate
     }
