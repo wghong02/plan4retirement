@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 
 struct DashboardView: View {
@@ -63,11 +64,11 @@ struct DashboardView: View {
                         // Projected Retirement Card
                         if let result = projectionResult {
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("At Retirement (\(settings.retirementAge))")
+                                Text("At Retirement (\(settings.retirementAge))\(settings.showInflationAdjusted ? " · today's $" : "")")
                                     .font(.subheadline)
                                     .foregroundColor(.gray)
 
-                                Text(result.projectedBalance.formatted(as: true))
+                                Text(retirementBalance(result.projectedBalance).formatted(as: true))
                                     .font(.title)
                                     .fontWeight(.bold)
                             }
@@ -130,6 +131,13 @@ struct DashboardView: View {
 
     private var totalContributions: Double {
         accounts.reduce(0) { $0 + $1.annualContribution }
+    }
+
+    /// Deflates the projected retirement balance to today's dollars when the setting is on.
+    private func retirementBalance(_ amount: Double) -> Double {
+        guard settings.showInflationAdjusted, settings.inflationRate != 0 else { return amount }
+        let years = max(0, settings.retirementAge - settings.currentAge)
+        return amount / pow(1 + settings.inflationRate / 100.0, Double(years))
     }
 
     /// ROI weighted by each account's most recent balance.

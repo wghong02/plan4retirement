@@ -2,10 +2,7 @@ import SwiftUI
 
 struct DataInputView: View {
     @State private var accounts: [Account] = []
-    @State private var showAddAccountSheet = false
-    @State private var showUpdateBalanceSheet = false
-    @State private var showHistorySheet = false
-    @State private var selectedAccount: Account?
+    @State private var activeSheet: ActiveSheet?
     @State private var accountHistory: [AccountHistory] = []
     @State private var accountToDelete: Account?
     @State private var showDeleteConfirmation = false
@@ -13,6 +10,26 @@ struct DataInputView: View {
     private let accountService = AccountService()
     private let historyService = AccountHistoryService()
     private let snapshotService = ProjectionSnapshotService()
+
+    /// A single item-driven sheet avoids the `.sheet(isPresented:)` race where the
+    /// selected account isn't ready when the sheet content is first built.
+    private enum ActiveSheet: Identifiable {
+        case add
+        case updateBalance(Account)
+        case history(Account)
+
+        var id: String {
+            switch self {
+            case .add: return "add"
+            case .updateBalance(let account): return "update-\(account.id)"
+            case .history(let account): return "history-\(account.id)"
+            }
+        }
+    }
+
+    private var sheetPresented: Binding<Bool> {
+        Binding(get: { activeSheet != nil }, set: { if !$0 { activeSheet = nil } })
+    }
 
     var body: some View {
         NavigationStack {
@@ -59,8 +76,7 @@ struct DataInputView: View {
 
                                 HStack(spacing: 12) {
                                     Button(action: {
-                                        selectedAccount = account
-                                        showUpdateBalanceSheet = true
+                                        activeSheet = .updateBalance(account)
                                     }) {
                                         Label("Update Balance", systemImage: "arrow.up.circle")
                                             .font(.subheadline)
@@ -68,9 +84,8 @@ struct DataInputView: View {
                                     .buttonStyle(.borderless)
 
                                     Button(action: {
-                                        selectedAccount = account
                                         loadAccountHistory(for: account)
-                                        showHistorySheet = true
+                                        activeSheet = .history(account)
                                     }) {
                                         Label("History", systemImage: "clock.fill")
                                             .font(.subheadline)
@@ -95,7 +110,7 @@ struct DataInputView: View {
                 }
 
                 HStack(spacing: 12) {
-                    Button(action: { showAddAccountSheet = true }) {
+                    Button(action: { activeSheet = .add }) {
                         Label("Add Account", systemImage: "plus.circle.fill")
                             .frame(maxWidth: .infinity)
                     }
@@ -107,19 +122,20 @@ struct DataInputView: View {
             .navigationTitle("Accounts")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear(perform: loadAccounts)
-            .sheet(isPresented: $showAddAccountSheet) {
-                AddAccountView(isPresented: $showAddAccountSheet) { newAccount in
-                    do {
-                        try accountService.addAccount(newAccount)
-                        loadAccounts()
-                    } catch {
-                        print("Error adding account: \(error)")
+            .sheet(item: $activeSheet) { sheet in
+                switch sheet {
+                case .add:
+                    AddAccountView(isPresented: sheetPresented) { newAccount in
+                        do {
+                            try accountService.addAccount(newAccount)
+                            loadAccounts()
+                        } catch {
+                            print("Error adding account: \(error)")
+                        }
                     }
-                }
-            }
-            .sheet(isPresented: $showUpdateBalanceSheet) {
-                if let account = selectedAccount {
-                    UpdateBalanceView(account: account, isPresented: $showUpdateBalanceSheet) { actualBalance in
+
+                case .updateBalance(let account):
+                    UpdateBalanceView(account: account, isPresented: sheetPresented) { actualBalance in
                         do {
                             // Record the change in history, keeping the prior balance as the "projected" value.
                             let entry = AccountHistory(
@@ -139,11 +155,9 @@ struct DataInputView: View {
                             print("Error updating balance: \(error)")
                         }
                     }
-                }
-            }
-            .sheet(isPresented: $showHistorySheet) {
-                if let account = selectedAccount {
-                    AccountHistoryView(account: account, history: accountHistory, isPresented: $showHistorySheet)
+
+                case .history(let account):
+                    AccountHistoryView(account: account, history: accountHistory, isPresented: sheetPresented)
                 }
             }
             .alert("Delete Account?", isPresented: $showDeleteConfirmation, presenting: accountToDelete) { account in

@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 
 struct RetirementLineChart: View {
@@ -10,6 +11,9 @@ struct RetirementLineChart: View {
     /// How many months / years to show in each display mode.
     var maxMonths: Int = 60
     var maxYears: Int = 100
+    /// When true, balances/contributions are deflated to today's dollars.
+    var inflationAdjusted: Bool = false
+    var inflationRate: Double = 0
     let height: CGFloat = 350
 
     @State private var selectedIndex: Int? = nil
@@ -26,14 +30,28 @@ struct RetirementLineChart: View {
     ]
 
     var filteredData: [ProjectionDataPoint] {
+        let base: [ProjectionDataPoint]
         switch displayMode {
         case .monthly:
             // Near-term detail: first `maxMonths` months as-is.
-            return Array(dataPoints.prefix(maxMonths))
+            base = Array(dataPoints.prefix(maxMonths))
         case .yearly:
             // One point per year, capped at `maxYears`.
             let yearly = dataPoints.filter { $0.monthIndex % 12 == 0 }
-            return Array(yearly.prefix(maxYears))
+            base = Array(yearly.prefix(maxYears))
+        }
+
+        guard inflationAdjusted, inflationRate != 0 else { return base }
+        let rate = inflationRate / 100.0
+        return base.map { point in
+            let factor = pow(1 + rate, Double(point.monthIndex) / 12.0)
+            return ProjectionDataPoint(
+                monthIndex: point.monthIndex,
+                age: point.age,
+                balance: point.balance / factor,
+                contribution: point.contribution / factor,
+                growth: point.growth / factor
+            )
         }
     }
 

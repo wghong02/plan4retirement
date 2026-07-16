@@ -42,6 +42,11 @@ class SettingsService: ObservableObject {
         didSet { UserDefaults.standard.set(maxYearsDisplayed, forKey: "maxYearsDisplayed") }
     }
 
+    /// When true, projected amounts are shown in today's dollars (deflated by inflation).
+    @Published var showInflationAdjusted: Bool {
+        didSet { UserDefaults.standard.set(showInflationAdjusted, forKey: "showInflationAdjusted") }
+    }
+
     static let shared = SettingsService()
 
     init() {
@@ -57,6 +62,7 @@ class SettingsService: ObservableObject {
         self.maxProjectionSnapshots = defaults.integer(forKey: "maxProjectionSnapshots") == 0 ? 10 : defaults.integer(forKey: "maxProjectionSnapshots")
         self.maxMonthsDisplayed = defaults.integer(forKey: "maxMonthsDisplayed") == 0 ? 60 : defaults.integer(forKey: "maxMonthsDisplayed")
         self.maxYearsDisplayed = defaults.integer(forKey: "maxYearsDisplayed") == 0 ? 100 : defaults.integer(forKey: "maxYearsDisplayed")
+        self.showInflationAdjusted = defaults.bool(forKey: "showInflationAdjusted")
     }
 
     func getProjectionParameters(lifeEvents: [LifeEvent] = []) -> ProjectionParameters {
@@ -83,5 +89,6 @@ class SettingsService: ObservableObject {
         maxProjectionSnapshots = 10
         maxMonthsDisplayed = 60
         maxYearsDisplayed = 100
+        showInflationAdjusted = false
     }
 }

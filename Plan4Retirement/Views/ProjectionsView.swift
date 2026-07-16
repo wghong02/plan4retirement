@@ -101,16 +101,20 @@ struct ProjectionsView: View {
                     title: "Retirement Growth Projection",
                     maxMonths: settings.maxMonthsDisplayed,
                     maxYears: settings.maxYearsDisplayed,
+                    inflationAdjusted: settings.showInflationAdjusted,
+                    inflationRate: parameters.inflationRate,
                     displayMode: $chartMode
                 )
                 .cardStyle()
 
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Text("Projected Balance at \(parameters.retirementAge)")
+                        Text("Projected Balance at \(parameters.retirementAge)\(todaysDollarsSuffix)")
                             .font(.subheadline)
                         Spacer()
-                        Text(projection.projectedBalance.formatted(as: true))
+                        Text(todaysDollars(projection.projectedBalance,
+                                           yearsFromNow: parameters.retirementAge - parameters.currentAge,
+                                           inflationRate: parameters.inflationRate).formatted(as: true))
                             .font(.headline)
                     }
 
@@ -184,16 +188,20 @@ struct ProjectionsView: View {
                         startMonth: Calendar.current.component(.month, from: snapshot.createdDate),
                         maxMonths: settings.maxMonthsDisplayed,
                         maxYears: settings.maxYearsDisplayed,
+                        inflationAdjusted: settings.showInflationAdjusted,
+                        inflationRate: snapshot.parametersUsed.inflationRate,
                         displayMode: $savedChartMode
                     )
                     .cardStyle()
 
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
-                            Text("Projected Balance at \(snapshot.projectedRetirementAge)")
+                            Text("Projected Balance at \(snapshot.projectedRetirementAge)\(todaysDollarsSuffix)")
                                 .font(.subheadline)
                             Spacer()
-                            Text(snapshot.projectedBalance.formatted(as: true))
+                            Text(todaysDollars(snapshot.projectedBalance,
+                                               yearsFromNow: snapshot.projectedRetirementAge - snapshot.parametersUsed.currentAge,
+                                               inflationRate: snapshot.parametersUsed.inflationRate).formatted(as: true))
                                 .font(.headline)
                         }
 
@@ -316,6 +324,17 @@ struct ProjectionsView: View {
     /// "Monthly" or "Annual" depending on the current chart's display mode.
     private var rateLabelPrefix: String {
         chartMode == .monthly ? "Monthly" : "Annual"
+    }
+
+    /// Suffix appended to balance labels when amounts are shown in today's dollars.
+    private var todaysDollarsSuffix: String {
+        settings.showInflationAdjusted ? " (today's $)" : ""
+    }
+
+    /// Deflates a future amount to today's dollars when the setting is on.
+    private func todaysDollars(_ amount: Double, yearsFromNow: Int, inflationRate: Double) -> Double {
+        guard settings.showInflationAdjusted, inflationRate != 0 else { return amount }
+        return amount / pow(1 + inflationRate / 100.0, Double(yearsFromNow))
     }
 
     /// Converts an annual percentage rate to its monthly-compounding equivalent

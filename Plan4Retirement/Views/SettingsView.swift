@@ -52,6 +52,8 @@ struct SettingsView: View {
                         errorMessage: "Please enter a number between 10 and 200"
                     )
                     .onChange(of: yearsText) { _ in commit() }
+
+                    Toggle("Show in Today's Dollars", isOn: $settings.showInflationAdjusted)
                 }
 
                 Section("Database") {
