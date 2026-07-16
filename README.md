@@ -63,5 +63,5 @@ Yearly and monthly views are derived from the same underlying monthly series.
 - **UserDefaults** stores assumptions and display settings.
 
 ## Requirements & build
-- Xcode with an iOS 16+ deployment target (uses `NavigationStack`).
+- Xcode with an iOS 17+ deployment target (uses `NavigationStack`).
 - Open `Plan4Retirement.xcodeproj` and run on a simulator or device.

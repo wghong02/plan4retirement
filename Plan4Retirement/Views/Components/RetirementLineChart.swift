@@ -19,7 +19,21 @@ struct RetirementLineChart: View {
     let height: CGFloat = 350
 
     @State private var selectedMonth: Int? = nil
+    // Pinch zoom on the x-axis. `zoomScale` is the committed zoom; `pinchScale`
+    // and `pinchAnchor` track the in-flight gesture so the month under the
+    // pinch stays fixed on screen while zooming.
+    @State private var zoomScale: CGFloat = 1
+    @State private var pinchScale: CGFloat = 1
+    @State private var pinchAnchor: (month: Double, fraction: Double)? = nil
+    // Pan (drag-while-zoomed). `centerMonth` is the committed window center
+    // (nil = center of the full range); `dragWidthLive` tracks the in-flight
+    // drag in points and is converted to months for display.
+    @State private var centerMonth: Double? = nil
+    @GestureState private var dragWidthLive: CGFloat = 0
+    @State private var lastChartWidth: CGFloat = 300
     @Binding var displayMode: DisplayMode
+
+    private let maxZoom: CGFloat = 24
 
     enum DisplayMode {
         case monthly
@@ -84,6 +98,45 @@ struct RetirementLineChart: View {
         return (lo, hi)
     }
 
+    private func spanForZoom(_ zoom: CGFloat, fullSpan: Int) -> Int {
+        let minSpan = displayMode == .monthly ? 6 : 48 // don't zoom past ~6 points
+        return max(minSpan, Int(CGFloat(fullSpan) / max(1, zoom)))
+    }
+
+    /// The full month range narrowed by the current pinch zoom, centered on
+    /// `centerMonth` (default: middle of the visible range) and shifted by any
+    /// in-flight pan drag. The y-axis rescales automatically to the visible points.
+    private var zoomedMonthRange: (min: Int, max: Int)? {
+        guard let full = visibleMonthRange else { return nil }
+        let zoom = min(max(zoomScale * pinchScale, 1), maxZoom)
+        guard zoom > 1.001 else { return full }
+
+        let fullSpan = max(1, full.max - full.min)
+        let span = spanForZoom(zoom, fullSpan: fullSpan)
+
+        var center: Double
+        if let pinchAnchor {
+            // Keep the month under the pinch at the same horizontal position
+            // while the span shrinks/grows around it.
+            center = pinchAnchor.month + (0.5 - pinchAnchor.fraction) * Double(span)
+        } else {
+            center = centerMonth ?? Double(full.min + full.max) / 2
+        }
+
+        // Live drag in points → months (drag right shows earlier months).
+        // Suppressed while scrubbing the tooltip or pinching.
+        if selectedMonth == nil, pinchAnchor == nil, dragWidthLive != 0 {
+            let chartWidth = max(1, lastChartWidth - padding * 2)
+            center -= Double(dragWidthLive / chartWidth) * Double(span)
+        }
+
+        center = min(max(center, Double(full.min) + Double(span) / 2), Double(full.max) - Double(span) / 2)
+
+        var start = Int((center - Double(span) / 2).rounded())
+        start = min(max(start, full.min), full.max - span)
+        return (start, start + span)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -117,16 +170,72 @@ struct RetirementLineChart: View {
                                     }
                                     .onEnded { _ in selectedMonth = nil }
                             )
+                            // Pinch to zoom the x-axis, anchored at the pinch location;
+                            // double-tap resets to the full range.
+                            .simultaneousGesture(
+                                MagnifyGesture()
+                                    .onChanged { value in
+                                        if pinchAnchor == nil, let range = zoomedMonthRange {
+                                            // Month under the fingers when the pinch began.
+                                            let chartWidth = max(1, lastChartWidth - padding * 2)
+                                            let viewX = value.startAnchor.x * lastChartWidth
+                                            let fraction = Double(min(max((viewX - padding) / chartWidth, 0), 1))
+                                            let month = Double(range.min) + fraction * Double(range.max - range.min)
+                                            pinchAnchor = (month, fraction)
+                                        }
+                                        pinchScale = value.magnification
+                                    }
+                                    .onEnded { value in
+                                        // Freeze the window where the pinch left it, then commit.
+                                        let finalRange = zoomedMonthRange
+                                        zoomScale = min(max(zoomScale * value.magnification, 1), maxZoom)
+                                        pinchAnchor = nil
+                                        pinchScale = 1
+                                        if zoomScale <= 1.001 {
+                                            zoomScale = 1
+                                            centerMonth = nil
+                                        } else if let finalRange {
+                                            centerMonth = Double(finalRange.min + finalRange.max) / 2
+                                        }
+                                    }
+                            )
+                            // Drag to pan when zoomed in. High priority so the page
+                            // ScrollView doesn't swallow the drag; the mask disables
+                            // it entirely at 1x so normal scrolling still works.
+                            .highPriorityGesture(
+                                DragGesture(minimumDistance: 12)
+                                    .updating($dragWidthLive) { value, state, _ in
+                                        if zoomScale > 1 { state = value.translation.width }
+                                    }
+                                    .onEnded { value in
+                                        commitPan(translation: value.translation.width, width: geo.size.width)
+                                    },
+                                including: zoomScale > 1 ? .all : .subviews
+                            )
+                            .onTapGesture(count: 2) {
+                                zoomScale = 1
+                                pinchScale = 1
+                                pinchAnchor = nil
+                                centerMonth = nil
+                            }
 
                         if let point = selectedPoint {
                             tooltipView(for: point)
                         }
                     }
+                    .onAppear { lastChartWidth = geo.size.width }
+                    .onChange(of: geo.size.width) { lastChartWidth = $0 }
                 }
                 .frame(height: height)
                 // Darker shade signals this area is interactive (press-and-hold), not scrollable.
                 .background(Color(.systemGray4))
                 .cornerRadius(8)
+                .onChange(of: displayMode) { _ in
+                    zoomScale = 1
+                    pinchScale = 1
+                    pinchAnchor = nil
+                    centerMonth = nil
+                }
 
                 legendView()
                 statsView()
@@ -137,10 +246,13 @@ struct RetirementLineChart: View {
     // MARK: - Canvas View
     private var canvas: some View {
         Canvas { context, size in
-            let projected = projectedFiltered
-            let actual = actualFiltered
+            guard let range = zoomedMonthRange else { return }
+            // Only the points inside the zoom window are drawn, so the y-scale
+            // below automatically fits the visible slice.
+            let projected = projectedFiltered.filter { (range.min...range.max).contains($0.monthIndex) }
+            let actual = actualFiltered.filter { (range.min...range.max).contains($0.monthIndex) }
             let all = projected + actual
-            guard !all.isEmpty, let range = visibleMonthRange else { return }
+            guard !all.isEmpty else { return }
 
             let maxBalance = all.map(\.balance).max() ?? 100000
             let minBalance = all.map(\.balance).min() ?? 0
@@ -185,7 +297,7 @@ struct RetirementLineChart: View {
             }
 
             // "Today" marker when there is past history to the left
-            if range.min < 0 {
+            if range.min < 0 && range.max >= 0 {
                 let x0 = xFor(0)
                 var todayPath = Path()
                 todayPath.move(to: CGPoint(x: x0, y: padding))
@@ -359,9 +471,23 @@ struct RetirementLineChart: View {
         .cornerRadius(8)
     }
 
+    /// Commits an in-flight pan drag into `centerMonth`, clamped so the window
+    /// stays within the data.
+    private func commitPan(translation: CGFloat, width: CGFloat) {
+        guard zoomScale > 1, selectedMonth == nil, let full = visibleMonthRange else { return }
+        let fullSpan = max(1, full.max - full.min)
+        let span = spanForZoom(min(max(zoomScale, 1), maxZoom), fullSpan: fullSpan)
+        let chartWidth = max(1, width - padding * 2)
+
+        var center = centerMonth ?? Double(full.min + full.max) / 2
+        center -= Double(translation / chartWidth) * Double(span)
+        center = min(max(center, Double(full.min) + Double(span) / 2), Double(full.max) - Double(span) / 2)
+        centerMonth = center
+    }
+
     // MARK: - Helpers
     private func updateSelection(at location: CGPoint, in size: CGSize) {
-        guard let range = visibleMonthRange else { return }
+        guard let range = zoomedMonthRange else { return }
         let chartWidth = size.width - (padding * 2)
         guard chartWidth > 0 else { return }
         let span = max(1, range.max - range.min)
