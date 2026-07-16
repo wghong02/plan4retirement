@@ -2,6 +2,7 @@ import SwiftUI
 
 struct DataInputView: View {
     @State private var accounts: [Account] = []
+    @State private var lastUpdateDates: [String: Date] = [:]
     @State private var activeSheet: ActiveSheet?
     @State private var accountToDelete: Account?
     @State private var showDeleteConfirmation = false
@@ -60,6 +61,11 @@ struct DataInputView: View {
                                         Text(account.type.displayName)
                                             .font(.subheadline)
                                             .foregroundColor(.gray)
+                                        if let updated = lastUpdateDates[account.id] {
+                                            Text("Updated \(updated.formatted(date: .abbreviated, time: .omitted))")
+                                                .font(.caption)
+                                                .foregroundColor(.gray)
+                                        }
                                     }
 
                                     Spacer()
@@ -181,6 +187,15 @@ struct DataInputView: View {
     private func loadAccounts() {
         do {
             accounts = try accountService.getAllAccounts()
+
+            // Latest balance-update date per account (the most recent history entry).
+            var dates: [String: Date] = [:]
+            for account in accounts {
+                if let latest = try? historyService.getLatestHistoryEntry(for: account.id) {
+                    dates[account.id] = latest.updateDate
+                }
+            }
+            lastUpdateDates = dates
         } catch {
             print("Error loading accounts: \(error)")
         }

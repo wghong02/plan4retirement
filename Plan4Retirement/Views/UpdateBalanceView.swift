@@ -6,6 +6,8 @@ struct UpdateBalanceView: View {
     var existingEntry: AccountHistory?
     @Binding var isPresented: Bool
     var onSave: (Double, Date, String?) -> Void
+    /// When provided (edit mode, and deletion allowed), shows a Delete button.
+    var onDelete: (() -> Void)?
 
     @State private var actualBalance: String
     @State private var notes: String
@@ -17,12 +19,14 @@ struct UpdateBalanceView: View {
         account: Account,
         existingEntry: AccountHistory? = nil,
         isPresented: Binding<Bool>,
-        onSave: @escaping (Double, Date, String?) -> Void
+        onSave: @escaping (Double, Date, String?) -> Void,
+        onDelete: (() -> Void)? = nil
     ) {
         self.account = account
         self.existingEntry = existingEntry
         self._isPresented = isPresented
         self.onSave = onSave
+        self.onDelete = onDelete
         _actualBalance = State(initialValue: existingEntry.map { Self.balanceString($0.actualBalance) } ?? "")
         _notes = State(initialValue: existingEntry?.notes ?? "")
         _date = State(initialValue: existingEntry?.updateDate ?? Date())
@@ -54,6 +58,21 @@ struct UpdateBalanceView: View {
                         Text("Notes must be \(maxNotesLength) characters or fewer (\(notes.count)/\(maxNotesLength))")
                             .font(.caption)
                             .foregroundColor(.red)
+                    }
+                }
+
+                if let onDelete {
+                    Section {
+                        Button(role: .destructive) {
+                            onDelete()
+                        } label: {
+                            HStack {
+                                Spacer()
+                                Label("Delete", systemImage: "trash")
+                                    .foregroundColor(.red)
+                                Spacer()
+                            }
+                        }
                     }
                 }
             }

@@ -77,9 +77,19 @@ struct AccountHistoryView: View {
             }
             .onAppear(perform: load)
             .sheet(item: $editingEntry) { entry in
-                UpdateBalanceView(account: account, existingEntry: entry, isPresented: editSheetPresented) { balance, date, notes in
-                    update(entry, balance: balance, date: date, notes: notes)
-                }
+                UpdateBalanceView(
+                    account: account,
+                    existingEntry: entry,
+                    isPresented: editSheetPresented,
+                    onSave: { balance, date, notes in
+                        update(entry, balance: balance, date: date, notes: notes)
+                    },
+                    // Deletion is only offered when it won't remove the last entry.
+                    onDelete: history.count > 1 ? {
+                        delete(entry)
+                        editingEntry = nil
+                    } : nil
+                )
             }
         }
     }
