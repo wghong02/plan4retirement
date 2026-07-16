@@ -3,10 +3,12 @@ import SwiftUI
 struct UpdateBalanceView: View {
     let account: Account
     @Binding var isPresented: Bool
-    var onSave: (Double) -> Void
+    var onSave: (Double, String?) -> Void
 
     @State private var actualBalance: String = ""
     @State private var notes: String = ""
+
+    private let maxNotesLength = 150
 
     var body: some View {
         NavigationStack {
@@ -27,6 +29,12 @@ struct UpdateBalanceView: View {
                         .keyboardType(.decimalPad)
 
                     TextField("Notes (optional)", text: $notes)
+
+                    if notes.count > maxNotesLength {
+                        Text("Notes must be \(maxNotesLength) characters or fewer (\(notes.count)/\(maxNotesLength))")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
                 }
             }
             .navigationTitle("Update Balance")
@@ -42,7 +50,7 @@ struct UpdateBalanceView: View {
                     Button("Save") {
                         saveUpdate()
                     }
-                    .disabled(actualBalance.isEmpty)
+                    .disabled(actualBalance.isEmpty || notes.count > maxNotesLength)
                 }
             }
         }
@@ -50,7 +58,7 @@ struct UpdateBalanceView: View {
 
     private func saveUpdate() {
         if let balance = Double(actualBalance) {
-            onSave(balance)
+            onSave(balance, notes.isEmpty ? nil : notes)
             isPresented = false
         }
     }
@@ -66,5 +74,5 @@ struct UpdateBalanceView: View {
             expectedROI: 7.0
         ),
         isPresented: .constant(true)
-    ) { _ in }
+    ) { _, _ in }
 }

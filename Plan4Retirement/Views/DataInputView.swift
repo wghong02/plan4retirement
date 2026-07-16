@@ -3,7 +3,6 @@ import SwiftUI
 struct DataInputView: View {
     @State private var accounts: [Account] = []
     @State private var activeSheet: ActiveSheet?
-    @State private var accountHistory: [AccountHistory] = []
     @State private var accountToDelete: Account?
     @State private var showDeleteConfirmation = false
 
@@ -84,7 +83,6 @@ struct DataInputView: View {
                                     .buttonStyle(.borderless)
 
                                     Button(action: {
-                                        loadAccountHistory(for: account)
                                         activeSheet = .history(account)
                                     }) {
                                         Label("History", systemImage: "clock.fill")
@@ -135,13 +133,14 @@ struct DataInputView: View {
                     }
 
                 case .updateBalance(let account):
-                    UpdateBalanceView(account: account, isPresented: sheetPresented) { actualBalance in
+                    UpdateBalanceView(account: account, isPresented: sheetPresented) { actualBalance, notes in
                         do {
                             // Record the change in history, keeping the prior balance as the "projected" value.
                             let entry = AccountHistory(
                                 accountId: account.id,
                                 actualBalance: actualBalance,
-                                projectedBalance: account.currentBalance
+                                projectedBalance: account.currentBalance,
+                                notes: notes
                             )
                             try historyService.addHistoryEntry(entry)
 
@@ -157,7 +156,7 @@ struct DataInputView: View {
                     }
 
                 case .history(let account):
-                    AccountHistoryView(account: account, history: accountHistory, isPresented: sheetPresented)
+                    AccountHistoryView(account: account, isPresented: sheetPresented)
                 }
             }
             .alert("Delete Account?", isPresented: $showDeleteConfirmation, presenting: accountToDelete) { account in
@@ -198,14 +197,6 @@ struct DataInputView: View {
         // Drop the row immediately, then reconcile with the store.
         accounts.removeAll { $0.id == account.id }
         loadAccounts()
-    }
-
-    private func loadAccountHistory(for account: Account) {
-        do {
-            accountHistory = try historyService.getHistoryForAccount(accountId: account.id)
-        } catch {
-            print("Error loading history: \(error)")
-        }
     }
 }
 
