@@ -31,7 +31,7 @@ struct ProjectionsView: View {
                 Picker("View", selection: $filterMode) {
                     Text("Current").tag(FilterMode.current)
                     Text("Saved").tag(FilterMode.saved)
-                    Text("By Account").tag(FilterMode.byAccount)
+                    Text("Breakdown").tag(FilterMode.byAccount)
                 }
                 .pickerStyle(.segmented)
                 .padding()
@@ -91,10 +91,6 @@ struct ProjectionsView: View {
     @ViewBuilder
     private func currentProjectionView() -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Current Projection")
-                .font(.headline)
-                .padding(.horizontal)
-
             if let projection, let parameters {
                 RetirementLineChart(
                     dataPoints: projection.projectionDataPoints,
@@ -151,10 +147,6 @@ struct ProjectionsView: View {
     @ViewBuilder
     private func savedProjectionsView() -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Saved Projections")
-                .font(.headline)
-                .padding(.horizontal)
-
             if savedSnapshots.isEmpty {
                 emptyStateView()
             } else {
