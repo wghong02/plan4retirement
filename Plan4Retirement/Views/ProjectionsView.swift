@@ -209,7 +209,7 @@ struct ProjectionsView: View {
                             Text("Saved")
                                 .font(.subheadline)
                             Spacer()
-                            Text(snapshot.createdDate.formatted(date: .abbreviated, time: .shortened))
+                            Text(snapshot.createdDate.formatted(date: .abbreviated, time: .omitted))
                                 .font(.caption)
                                 .foregroundColor(.gray)
                         }
@@ -277,7 +277,7 @@ struct ProjectionsView: View {
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
 
-                            Text(snapshot.createdDate.formatted(date: .abbreviated, time: .shortened))
+                            Text(snapshot.createdDate.formatted(date: .abbreviated, time: .omitted))
                                 .font(.caption)
                                 .foregroundColor(.gray)
                         }

@@ -5,7 +5,12 @@ struct AccountHistoryView: View {
     @Binding var isPresented: Bool
 
     @State private var history: [AccountHistory] = []
+    @State private var editingEntry: AccountHistory?
     private let historyService = AccountHistoryService()
+
+    private var editSheetPresented: Binding<Bool> {
+        Binding(get: { editingEntry != nil }, set: { if !$0 { editingEntry = nil } })
+    }
 
     var body: some View {
         NavigationStack {
@@ -29,7 +34,7 @@ struct AccountHistoryView: View {
                         ForEach(history) { entry in
                             VStack(alignment: .leading, spacing: 4) {
                                 HStack {
-                                    Text(entry.updateDate.formatted(date: .abbreviated, time: .shortened))
+                                    Text(entry.updateDate.formatted(date: .abbreviated, time: .omitted))
                                         .font(.subheadline)
                                     Spacer()
                                     Text(entry.actualBalance.formatted(as: true))
@@ -43,6 +48,10 @@ struct AccountHistoryView: View {
                                 }
                             }
                             .padding(.vertical, 2)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                editingEntry = entry
+                            }
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 Button(role: .destructive) {
                                     delete(entry)
@@ -63,6 +72,11 @@ struct AccountHistoryView: View {
                 }
             }
             .onAppear(perform: load)
+            .sheet(item: $editingEntry) { entry in
+                UpdateBalanceView(account: account, existingEntry: entry, isPresented: editSheetPresented) { balance, date, notes in
+                    update(entry, balance: balance, date: date, notes: notes)
+                }
+            }
         }
     }
 
@@ -72,6 +86,23 @@ struct AccountHistoryView: View {
         } catch {
             print("Error loading history: \(error)")
         }
+    }
+
+    private func update(_ entry: AccountHistory, balance: Double, date: Date, notes: String?) {
+        let updated = AccountHistory(
+            id: entry.id,
+            accountId: entry.accountId,
+            actualBalance: balance,
+            projectedBalance: entry.projectedBalance,
+            updateDate: date,
+            notes: notes
+        )
+        do {
+            try historyService.updateHistoryEntry(updated)
+        } catch {
+            print("Error updating history entry: \(error)")
+        }
+        load()
     }
 
     private func delete(_ entry: AccountHistory) {

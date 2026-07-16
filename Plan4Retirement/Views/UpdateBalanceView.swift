@@ -2,13 +2,31 @@ import SwiftUI
 
 struct UpdateBalanceView: View {
     let account: Account
+    /// When set, the view edits an existing history entry instead of adding a new one.
+    var existingEntry: AccountHistory?
     @Binding var isPresented: Bool
-    var onSave: (Double, String?) -> Void
+    var onSave: (Double, Date, String?) -> Void
 
-    @State private var actualBalance: String = ""
-    @State private var notes: String = ""
+    @State private var actualBalance: String
+    @State private var notes: String
+    @State private var date: Date
 
     private let maxNotesLength = 150
+
+    init(
+        account: Account,
+        existingEntry: AccountHistory? = nil,
+        isPresented: Binding<Bool>,
+        onSave: @escaping (Double, Date, String?) -> Void
+    ) {
+        self.account = account
+        self.existingEntry = existingEntry
+        self._isPresented = isPresented
+        self.onSave = onSave
+        _actualBalance = State(initialValue: existingEntry.map { Self.balanceString($0.actualBalance) } ?? "")
+        _notes = State(initialValue: existingEntry?.notes ?? "")
+        _date = State(initialValue: existingEntry?.updateDate ?? Date())
+    }
 
     var body: some View {
         NavigationStack {
@@ -24,9 +42,11 @@ struct UpdateBalanceView: View {
                         .foregroundColor(.gray)
                 }
 
-                Section("Update") {
+                Section(existingEntry == nil ? "Update" : "Edit") {
                     TextField("New Actual Balance", text: $actualBalance)
                         .keyboardType(.decimalPad)
+
+                    DatePicker("Date", selection: $date, displayedComponents: .date)
 
                     TextField("Notes (optional)", text: $notes)
 
@@ -37,7 +57,7 @@ struct UpdateBalanceView: View {
                     }
                 }
             }
-            .navigationTitle("Update Balance")
+            .navigationTitle(existingEntry == nil ? "Update Balance" : "Edit Balance")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -58,9 +78,15 @@ struct UpdateBalanceView: View {
 
     private func saveUpdate() {
         if let balance = Double(actualBalance) {
-            onSave(balance, notes.isEmpty ? nil : notes)
+            // Store the calendar day only (no time-of-day component).
+            onSave(balance, Calendar.current.startOfDay(for: date), notes.isEmpty ? nil : notes)
             isPresented = false
         }
+    }
+
+    /// Whole numbers show without a trailing ".0" when pre-filling for editing.
+    private static func balanceString(_ value: Double) -> String {
+        value == value.rounded() ? String(Int(value)) : String(value)
     }
 }
 
@@ -74,5 +100,5 @@ struct UpdateBalanceView: View {
             expectedROI: 7.0
         ),
         isPresented: .constant(true)
-    ) { _, _ in }
+    ) { _, _, _ in }
 }

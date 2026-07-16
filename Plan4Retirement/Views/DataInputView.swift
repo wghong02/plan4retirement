@@ -133,13 +133,14 @@ struct DataInputView: View {
                     }
 
                 case .updateBalance(let account):
-                    UpdateBalanceView(account: account, isPresented: sheetPresented) { actualBalance, notes in
+                    UpdateBalanceView(account: account, isPresented: sheetPresented) { actualBalance, date, notes in
                         do {
                             // Record the change in history, keeping the prior balance as the "projected" value.
                             let entry = AccountHistory(
                                 accountId: account.id,
                                 actualBalance: actualBalance,
                                 projectedBalance: account.currentBalance,
+                                updateDate: date,
                                 notes: notes
                             )
                             try historyService.addHistoryEntry(entry)
