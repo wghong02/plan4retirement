@@ -45,6 +45,7 @@ class AccountService {
         guard let entity = results.first else { return }
 
         entity.name = account.name
+        entity.type = account.type.rawValue
         entity.currentBalance = account.currentBalance
         entity.annualContribution = account.annualContribution
         entity.expectedROI = account.expectedROI

@@ -9,6 +9,7 @@ struct UpdateDetailsView: View {
 
     @State private var name: String
     @State private var type: AccountType
+    @State private var annualContribution: String
     @State private var roi: String
     @State private var contributionIncrease: String
 
@@ -22,6 +23,7 @@ struct UpdateDetailsView: View {
         self.onSave = onSave
         _name = State(initialValue: account.name)
         _type = State(initialValue: account.type)
+        _annualContribution = State(initialValue: Self.numberString(account.annualContribution))
         _roi = State(initialValue: Self.numberString(account.expectedROI))
         _contributionIncrease = State(initialValue: Self.numberString(account.contributionIncreaseRate))
     }
@@ -30,7 +32,12 @@ struct UpdateDetailsView: View {
         NavigationStack {
             Form {
                 Section("Account Details") {
-                    TextField("Account Name", text: $name)
+                    HStack {
+                        Text("Name")
+                        Spacer()
+                        TextField("Account Name", text: $name)
+                            .multilineTextAlignment(.trailing)
+                    }
 
                     Picker("Tax Treatment", selection: $type) {
                         ForEach(AccountType.allCases, id: \.self) { type in
@@ -38,11 +45,35 @@ struct UpdateDetailsView: View {
                         }
                     }
 
-                    TextField("Expected Annual Growth / ROI (%)", text: $roi)
-                        .keyboardType(.decimalPad)
+                    HStack {
+                        Text("Annual Contribution")
+                        Spacer()
+                        TextField("0", text: $annualContribution)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                    }
 
-                    TextField("Annual Contribution Increase (%)", text: $contributionIncrease)
-                        .keyboardType(.decimalPad)
+                    HStack {
+                        Text("Expected Growth / ROI")
+                        Spacer()
+                        TextField("0", text: $roi)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 70)
+                        Text("%")
+                            .foregroundColor(.gray)
+                    }
+
+                    HStack {
+                        Text("Contribution Increase")
+                        Spacer()
+                        TextField("0", text: $contributionIncrease)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 70)
+                        Text("%")
+                            .foregroundColor(.gray)
+                    }
                 }
             }
             .navigationTitle("Update Details")
@@ -68,6 +99,7 @@ struct UpdateDetailsView: View {
         var updated = account
         updated.name = name
         updated.type = type
+        updated.annualContribution = Double(annualContribution) ?? account.annualContribution
         updated.expectedROI = Double(roi) ?? account.expectedROI
         updated.contributionIncreaseRate = Double(contributionIncrease) ?? account.contributionIncreaseRate
 
