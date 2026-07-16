@@ -7,6 +7,7 @@ struct AccountHistoryView: View {
     @State private var history: [AccountHistory] = []
     @State private var editingEntry: AccountHistory?
     private let historyService = AccountHistoryService()
+    private let accountService = AccountService()
 
     private var editSheetPresented: Binding<Bool> {
         Binding(get: { editingEntry != nil }, set: { if !$0 { editingEntry = nil } })
@@ -53,10 +54,13 @@ struct AccountHistoryView: View {
                                 editingEntry = entry
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                Button(role: .destructive) {
-                                    delete(entry)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
+                                // Keep at least one entry so the account always has a baseline balance.
+                                if history.count > 1 {
+                                    Button(role: .destructive) {
+                                        delete(entry)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
                                 }
                             }
                         }
@@ -99,6 +103,7 @@ struct AccountHistoryView: View {
         )
         do {
             try historyService.updateHistoryEntry(updated)
+            try accountService.syncCurrentBalanceFromHistory(accountId: account.id)
         } catch {
             print("Error updating history entry: \(error)")
         }
@@ -106,8 +111,11 @@ struct AccountHistoryView: View {
     }
 
     private func delete(_ entry: AccountHistory) {
+        // Never remove the last remaining entry.
+        guard history.count > 1 else { return }
         do {
             try historyService.deleteHistoryEntry(by: entry.id)
+            try accountService.syncCurrentBalanceFromHistory(accountId: account.id)
         } catch {
             print("Error deleting history entry: \(error)")
         }

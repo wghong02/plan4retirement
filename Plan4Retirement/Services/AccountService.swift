@@ -53,6 +53,24 @@ class AccountService {
         try context.save()
     }
 
+    /// Sets the account's current balance to its most recent (latest-dated) history
+    /// entry. If there is no history, the balance is left unchanged.
+    func syncCurrentBalanceFromHistory(accountId: String) throws {
+        let historyService = AccountHistoryService(context: context)
+        guard let latest = try historyService.getLatestHistoryEntry(for: accountId) else { return }
+
+        let request = AccountEntity.fetchRequest() as! NSFetchRequest<AccountEntity>
+        request.predicate = NSPredicate(format: "id == %@", accountId)
+
+        let results = try context.fetch(request)
+        guard let entity = results.first else { return }
+
+        entity.currentBalance = latest.actualBalance
+        entity.lastUpdatedDate = Date()
+
+        try context.save()
+    }
+
     // MARK: - Delete
     func deleteAccount(by id: String) throws {
         let request = AccountEntity.fetchRequest() as! NSFetchRequest<AccountEntity>

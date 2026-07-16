@@ -120,12 +120,21 @@ struct DataInputView: View {
             .navigationTitle("Accounts")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear(perform: loadAccounts)
-            .sheet(item: $activeSheet) { sheet in
+            .sheet(item: $activeSheet, onDismiss: loadAccounts) { sheet in
                 switch sheet {
                 case .add:
                     AddAccountView(isPresented: sheetPresented) { newAccount in
                         do {
                             try accountService.addAccount(newAccount)
+                            // Seed history with the initial balance so every account has a baseline entry.
+                            let initial = AccountHistory(
+                                accountId: newAccount.id,
+                                actualBalance: newAccount.currentBalance,
+                                projectedBalance: newAccount.currentBalance,
+                                updateDate: Calendar.current.startOfDay(for: newAccount.createdDate),
+                                notes: "Initial balance"
+                            )
+                            try historyService.addHistoryEntry(initial)
                             loadAccounts()
                         } catch {
                             print("Error adding account: \(error)")
@@ -145,10 +154,8 @@ struct DataInputView: View {
                             )
                             try historyService.addHistoryEntry(entry)
 
-                            // Update the account's current balance to the new value.
-                            var updated = account
-                            updated.currentBalance = actualBalance
-                            try accountService.updateAccount(updated)
+                            // Reflect the latest-dated update as the account's current balance.
+                            try accountService.syncCurrentBalanceFromHistory(accountId: account.id)
 
                             loadAccounts()
                         } catch {
