@@ -157,7 +157,7 @@ struct DataInputView: View {
                             try historyService.addHistoryEntry(initial)
                             loadAccounts()
                         } catch {
-                            print("Error adding account: \(error)")
+                            AppLog.error("Error adding account: \(error.localizedDescription)")
                         }
                     }
 
@@ -167,7 +167,7 @@ struct DataInputView: View {
                             try accountService.updateAccount(updated)
                             loadAccounts()
                         } catch {
-                            print("Error updating account details: \(error)")
+                            AppLog.error("Error updating account details: \(error.localizedDescription)")
                         }
                     }
 
@@ -188,7 +188,7 @@ struct DataInputView: View {
                                 try accountService.syncCurrentBalanceFromHistory(accountId: account.id)
                                 loadAccounts()
                             } catch {
-                                print("Error updating balance: \(error)")
+                                AppLog.error("Error updating balance: \(error.localizedDescription)")
                             }
                         },
                         duplicateCheck: { balance, date, notes in
@@ -224,7 +224,7 @@ struct DataInputView: View {
             }
             lastUpdateDates = dates
         } catch {
-            print("Error loading accounts: \(error)")
+            AppLog.error("Error loading accounts: \(error.localizedDescription)")
         }
     }
 
@@ -233,7 +233,7 @@ struct DataInputView: View {
         do {
             try accountService.deleteAccount(by: account.id)
         } catch {
-            print("Error deleting account: \(error)")
+            AppLog.error("Error deleting account: \(error.localizedDescription)")
         }
 
         // Saved projections were computed from the old portfolio, so clear them.
@@ -241,7 +241,7 @@ struct DataInputView: View {
         do {
             try snapshotService.deleteAllSnapshots()
         } catch {
-            print("Error clearing snapshots: \(error)")
+            AppLog.error("Error clearing snapshots: \(error.localizedDescription)")
         }
 
         // Drop the row immediately, then reconcile with the store.

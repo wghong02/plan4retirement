@@ -101,7 +101,7 @@ struct AccountHistoryView: View {
         do {
             history = try historyService.getHistoryForAccount(accountId: account.id)
         } catch {
-            print("Error loading history: \(error)")
+            AppLog.error("Error loading history: \(error.localizedDescription)")
         }
     }
 
@@ -118,7 +118,7 @@ struct AccountHistoryView: View {
             try historyService.updateHistoryEntry(updated)
             try accountService.syncCurrentBalanceFromHistory(accountId: account.id)
         } catch {
-            print("Error updating history entry: \(error)")
+            AppLog.error("Error updating history entry: \(error.localizedDescription)")
         }
         load()
     }
@@ -130,7 +130,7 @@ struct AccountHistoryView: View {
             try historyService.deleteHistoryEntry(by: entry.id)
             try accountService.syncCurrentBalanceFromHistory(accountId: account.id)
         } catch {
-            print("Error deleting history entry: \(error)")
+            AppLog.error("Error deleting history entry: \(error.localizedDescription)")
         }
         history.removeAll { $0.id == entry.id }
     }

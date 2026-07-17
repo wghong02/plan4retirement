@@ -155,7 +155,7 @@ struct DashboardView: View {
                 parameters: params
             )
         } catch {
-            print("Error loading data: \(error)")
+            AppLog.error("Error loading data: \(error.localizedDescription)")
         }
     }
 }

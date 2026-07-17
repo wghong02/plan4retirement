@@ -418,7 +418,7 @@ struct ProjectionsView: View {
                 selectedSnapshotId = first.id
             }
         } catch {
-            print("Error loading projections: \(error)")
+            AppLog.error("Error loading projections: \(error.localizedDescription)")
         }
     }
 
@@ -439,7 +439,7 @@ struct ProjectionsView: View {
             try snapshotService.saveSnapshot(snapshot)
             loadData()
         } catch {
-            print("Error saving snapshot: \(error)")
+            AppLog.error("Error saving snapshot: \(error.localizedDescription)")
         }
     }
 }

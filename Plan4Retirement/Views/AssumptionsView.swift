@@ -138,7 +138,7 @@ struct AssumptionsView: View {
                         try lifeEventService.addLifeEvent(newEvent)
                         loadLifeEvents()
                     } catch {
-                        print("Error adding life event: \(error)")
+                        AppLog.error("Error adding life event: \(error.localizedDescription)")
                     }
                 }
             }
@@ -211,7 +211,7 @@ struct AssumptionsView: View {
         do {
             lifeEvents = try lifeEventService.getAllLifeEvents()
         } catch {
-            print("Error loading life events: \(error)")
+            AppLog.error("Error loading life events: \(error.localizedDescription)")
         }
     }
 
@@ -222,7 +222,7 @@ struct AssumptionsView: View {
                 try lifeEventService.deleteLifeEvent(by: event.id)
                 loadLifeEvents()
             } catch {
-                print("Error deleting life event: \(error)")
+                AppLog.error("Error deleting life event: \(error.localizedDescription)")
             }
         }
     }

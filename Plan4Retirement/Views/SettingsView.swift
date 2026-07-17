@@ -139,7 +139,7 @@ struct SettingsView: View {
             settings.resetToDefaults()
             loadFromSettings()
         } catch {
-            print("Error deleting data: \(error)")
+            AppLog.error("Error deleting data: \(error.localizedDescription)")
         }
     }
 }
