@@ -4,7 +4,7 @@ import SwiftUI
 struct DashboardView: View {
     @EnvironmentObject var settings: SettingsService
     @State private var accounts: [Account] = []
-    @State private var projectionResult: (projectionDataPoints: [ProjectionDataPoint], projectedBalance: Double)? = nil
+    @State private var projectionResult: ProjectionResult? = nil
 
     private let accountService = AccountService()
     private let calculator = ProjectionCalculator()
@@ -133,16 +133,14 @@ struct DashboardView: View {
 
     /// Deflates the projected retirement balance to today's dollars when the setting is on.
     private func retirementBalance(_ amount: Double) -> Double {
-        guard settings.showInflationAdjusted, settings.inflationRate != 0 else { return amount }
+        guard settings.showInflationAdjusted else { return amount }
         let years = max(0, settings.retirementAge - settings.currentAge)
-        return amount / pow(1 + settings.inflationRate / 100.0, Double(years))
+        return amount.deflated(byAnnualRate: settings.inflationRate, overYears: Double(years))
     }
 
     /// ROI weighted by each account's most recent balance.
     private var averageROI: Double {
-        let total = accounts.totalBalance
-        guard total > 0 else { return 0 }
-        return accounts.reduce(0) { $0 + $1.expectedROI * ($1.currentBalance / total) }
+        accounts.weightedAverage(of: \.expectedROI)
     }
 
     private func loadData() {

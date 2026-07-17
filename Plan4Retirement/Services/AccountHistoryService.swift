@@ -16,7 +16,7 @@ class AccountHistoryService {
 
     // MARK: - Read
     func getHistoryForAccount(accountId: String) throws -> [AccountHistory] {
-        let request = AccountHistoryEntity.fetchRequest() as! NSFetchRequest<AccountHistoryEntity>
+        let request = AccountHistoryEntity.typedFetchRequest()
         request.predicate = NSPredicate(format: "accountId == %@", accountId)
         request.sortDescriptors = [NSSortDescriptor(keyPath: \AccountHistoryEntity.updateDate, ascending: false)]
 
@@ -25,7 +25,7 @@ class AccountHistoryService {
     }
 
     func getLatestHistoryEntry(for accountId: String) throws -> AccountHistory? {
-        let request = AccountHistoryEntity.fetchRequest() as! NSFetchRequest<AccountHistoryEntity>
+        let request = AccountHistoryEntity.typedFetchRequest()
         request.predicate = NSPredicate(format: "accountId == %@", accountId)
         request.sortDescriptors = [NSSortDescriptor(keyPath: \AccountHistoryEntity.updateDate, ascending: false)]
         request.fetchLimit = 1
@@ -34,9 +34,21 @@ class AccountHistoryService {
         return results.first?.toAccountHistory()
     }
 
+    /// True when another entry for the account has the same balance, calendar day,
+    /// and note. Pass `excludingId` when editing so an entry doesn't match itself.
+    func hasDuplicateEntry(accountId: String, balance: Double, date: Date, notes: String?, excludingId: String? = nil) throws -> Bool {
+        let entries = try getHistoryForAccount(accountId: accountId)
+        return entries.contains { entry in
+            entry.id != excludingId
+                && entry.actualBalance == balance
+                && Calendar.current.isDate(entry.updateDate, inSameDayAs: date)
+                && (entry.notes ?? "") == (notes ?? "")
+        }
+    }
+
     // MARK: - Update
     func updateHistoryEntry(_ entry: AccountHistory) throws {
-        let request = AccountHistoryEntity.fetchRequest() as! NSFetchRequest<AccountHistoryEntity>
+        let request = AccountHistoryEntity.typedFetchRequest()
         request.predicate = NSPredicate(format: "id == %@", entry.id)
 
         let results = try context.fetch(request)
@@ -52,7 +64,7 @@ class AccountHistoryService {
 
     // MARK: - Delete
     func deleteHistoryEntry(by id: String) throws {
-        let request = AccountHistoryEntity.fetchRequest() as! NSFetchRequest<AccountHistoryEntity>
+        let request = AccountHistoryEntity.typedFetchRequest()
         request.predicate = NSPredicate(format: "id == %@", id)
 
         let results = try context.fetch(request)
@@ -64,7 +76,7 @@ class AccountHistoryService {
     }
 
     func deleteHistoryForAccount(accountId: String) throws {
-        let request = AccountHistoryEntity.fetchRequest() as! NSFetchRequest<AccountHistoryEntity>
+        let request = AccountHistoryEntity.typedFetchRequest()
         request.predicate = NSPredicate(format: "accountId == %@", accountId)
 
         let results = try context.fetch(request)

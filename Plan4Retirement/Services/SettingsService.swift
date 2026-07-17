@@ -44,14 +44,14 @@ class SettingsService: ObservableObject {
     init() {
         let defaults = UserDefaults.standard
 
-        self.currentAge = defaults.integer(forKey: "currentAge") == 0 ? 30 : defaults.integer(forKey: "currentAge")
-        self.retirementAge = defaults.integer(forKey: "retirementAge") == 0 ? 67 : defaults.integer(forKey: "retirementAge")
+        self.currentAge = defaults.object(forKey: "currentAge") as? Int ?? 30
+        self.retirementAge = defaults.object(forKey: "retirementAge") as? Int ?? 67
         self.inflationRate = defaults.object(forKey: "inflationRate") as? Double ?? 2.5
-        self.lifeExpectancy = defaults.integer(forKey: "lifeExpectancy") == 0 ? 95 : defaults.integer(forKey: "lifeExpectancy")
+        self.lifeExpectancy = defaults.object(forKey: "lifeExpectancy") as? Int ?? 95
         self.annualSpendingInRetirement = defaults.object(forKey: "annualSpendingInRetirement") as? Double ?? 50000
-        self.maxProjectionSnapshots = defaults.integer(forKey: "maxProjectionSnapshots") == 0 ? 10 : defaults.integer(forKey: "maxProjectionSnapshots")
-        self.maxMonthsDisplayed = defaults.integer(forKey: "maxMonthsDisplayed") == 0 ? 60 : defaults.integer(forKey: "maxMonthsDisplayed")
-        self.maxYearsDisplayed = defaults.integer(forKey: "maxYearsDisplayed") == 0 ? 100 : defaults.integer(forKey: "maxYearsDisplayed")
+        self.maxProjectionSnapshots = defaults.object(forKey: "maxProjectionSnapshots") as? Int ?? 10
+        self.maxMonthsDisplayed = defaults.object(forKey: "maxMonthsDisplayed") as? Int ?? 60
+        self.maxYearsDisplayed = defaults.object(forKey: "maxYearsDisplayed") as? Int ?? 100
         self.showInflationAdjusted = defaults.bool(forKey: "showInflationAdjusted")
     }
 

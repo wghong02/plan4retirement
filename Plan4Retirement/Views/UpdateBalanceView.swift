@@ -35,7 +35,7 @@ struct UpdateBalanceView: View {
         self.onDelete = onDelete
         self.duplicateCheck = duplicateCheck
         // Only pre-fill when editing an existing entry; adding starts blank.
-        _actualBalance = State(initialValue: existingEntry.map { Self.numberString($0.actualBalance) } ?? "")
+        _actualBalance = State(initialValue: existingEntry.map { $0.actualBalance.fieldText } ?? "")
         _notes = State(initialValue: existingEntry?.notes ?? "")
         _date = State(initialValue: existingEntry?.updateDate ?? Date())
     }
@@ -126,11 +126,6 @@ struct UpdateBalanceView: View {
         guard let balance = Double(actualBalance) else { return }
         onSave(balance, Calendar.current.startOfDay(for: date), notes.isEmpty ? nil : notes)
         isPresented = false
-    }
-
-    /// Whole numbers show without a trailing ".0" when pre-filling for editing.
-    private static func numberString(_ value: Double) -> String {
-        value == value.rounded() ? String(Int(value)) : String(value)
     }
 }
 

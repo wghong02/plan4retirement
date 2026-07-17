@@ -1,5 +1,12 @@
 import Foundation
 
+/// Output of a retirement projection: the full monthly series plus the balance
+/// at retirement age.
+struct ProjectionResult {
+    let dataPoints: [ProjectionDataPoint]
+    let projectedBalance: Double
+}
+
 class ProjectionCalculator {
 
     // MARK: - Main Projection Calculation
@@ -12,7 +19,7 @@ class ProjectionCalculator {
         accounts: [Account],
         parameters: ProjectionParameters,
         horizonMonths: Int? = nil
-    ) -> (projectionDataPoints: [ProjectionDataPoint], projectedBalance: Double) {
+    ) -> ProjectionResult {
 
         var dataPoints: [ProjectionDataPoint] = []
 
@@ -94,7 +101,7 @@ class ProjectionCalculator {
         let projectedBalance = dataPoints.first { $0.age >= parameters.retirementAge }?.balance
             ?? dataPoints.last?.balance ?? balances.reduce(0, +)
 
-        return (dataPoints, projectedBalance)
+        return ProjectionResult(dataPoints: dataPoints, projectedBalance: projectedBalance)
     }
 
     /// Distributes a household-level amount (positive or negative) across account

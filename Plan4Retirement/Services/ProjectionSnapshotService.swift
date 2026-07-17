@@ -27,16 +27,8 @@ class ProjectionSnapshotService {
     }
 
     // MARK: - Read
-    func getSnapshot(by id: String) throws -> ProjectionSnapshot? {
-        let request = ProjectionSnapshotEntity.fetchRequest() as! NSFetchRequest<ProjectionSnapshotEntity>
-        request.predicate = NSPredicate(format: "id == %@", id)
-
-        let results = try context.fetch(request)
-        return results.first?.toProjectionSnapshot()
-    }
-
     func getAllSnapshots() throws -> [ProjectionSnapshot] {
-        let request = ProjectionSnapshotEntity.fetchRequest() as! NSFetchRequest<ProjectionSnapshotEntity>
+        let request = ProjectionSnapshotEntity.typedFetchRequest()
         request.sortDescriptors = [NSSortDescriptor(keyPath: \ProjectionSnapshotEntity.createdDate, ascending: false)]
 
         let results = try context.fetch(request)
@@ -44,43 +36,13 @@ class ProjectionSnapshotService {
     }
 
     func getSnapshotCount() throws -> Int {
-        let request = ProjectionSnapshotEntity.fetchRequest() as! NSFetchRequest<ProjectionSnapshotEntity>
+        let request = ProjectionSnapshotEntity.typedFetchRequest()
         return try context.count(for: request)
     }
 
-    // MARK: - Update
-    func updateSnapshot(_ snapshot: ProjectionSnapshot) throws {
-        let request = ProjectionSnapshotEntity.fetchRequest() as! NSFetchRequest<ProjectionSnapshotEntity>
-        request.predicate = NSPredicate(format: "id == %@", snapshot.id)
-
-        let results = try context.fetch(request)
-        guard let entity = results.first else { return }
-
-        let encoder = JSONEncoder()
-        if let projectionDataJson = try? encoder.encode(snapshot.projectionData),
-           let projectionDataString = String(data: projectionDataJson, encoding: .utf8) {
-            entity.projectionData = projectionDataString
-        }
-        entity.name = snapshot.name
-
-        try context.save()
-    }
-
     // MARK: - Delete
-    func deleteSnapshot(by id: String) throws {
-        let request = ProjectionSnapshotEntity.fetchRequest() as! NSFetchRequest<ProjectionSnapshotEntity>
-        request.predicate = NSPredicate(format: "id == %@", id)
-
-        let results = try context.fetch(request)
-        for entity in results {
-            context.delete(entity)
-        }
-
-        try context.save()
-    }
-
     func deleteOldestSnapshot() throws {
-        let request = ProjectionSnapshotEntity.fetchRequest() as! NSFetchRequest<ProjectionSnapshotEntity>
+        let request = ProjectionSnapshotEntity.typedFetchRequest()
         request.sortDescriptors = [NSSortDescriptor(keyPath: \ProjectionSnapshotEntity.createdDate, ascending: true)]
         request.fetchLimit = 1
 

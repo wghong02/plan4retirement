@@ -20,19 +20,20 @@ struct AccountDistributionHistogram: View {
                 emptyStateView()
             } else {
                 // Chart
-                ZStack {
-                    canvas
-                        .gesture(
-                            DragGesture()
-                                .onChanged { value in
-                                    let frame = CGRect(x: 0, y: 0, width: 300, height: height)
-                                    updateSelectedBar(at: value.location, in: frame)
-                                }
-                        )
+                GeometryReader { geo in
+                    ZStack {
+                        canvas
+                            .gesture(
+                                DragGesture()
+                                    .onChanged { value in
+                                        updateSelectedBar(at: value.location, in: geo.size)
+                                    }
+                            )
 
-                    // Tooltip on bar selection
-                    if let barName = selectedBar, let value = distribution[barName] {
-                        tooltipView(for: barName, value: value)
+                        // Tooltip on bar selection
+                        if let barName = selectedBar, let value = distribution[barName] {
+                            tooltipView(for: barName, value: value)
+                        }
                     }
                 }
                 .frame(height: height)
@@ -209,9 +210,10 @@ struct AccountDistributionHistogram: View {
     }
 
     // MARK: - Helpers
-    private func updateSelectedBar(at location: CGPoint, in frame: CGRect) {
+    private func updateSelectedBar(at location: CGPoint, in size: CGSize) {
         let padding: CGFloat = 40
-        let chartWidth = frame.width - (padding * 2)
+        let chartWidth = size.width - (padding * 2)
+        guard chartWidth > 0 else { return }
         let barCount = distribution.count
 
         let normalizedX = (location.x - padding) / chartWidth

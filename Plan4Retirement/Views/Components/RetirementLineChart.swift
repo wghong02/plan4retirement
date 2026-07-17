@@ -51,15 +51,14 @@ struct RetirementLineChart: View {
 
     private func adjusted(_ points: [ProjectionDataPoint]) -> [ProjectionDataPoint] {
         guard inflationAdjusted, inflationRate != 0 else { return points }
-        let rate = inflationRate / 100.0
         return points.map { point in
-            let factor = pow(1 + rate, Double(point.monthIndex) / 12.0)
+            let years = Double(point.monthIndex) / 12.0
             return ProjectionDataPoint(
                 monthIndex: point.monthIndex,
                 age: point.age,
-                balance: point.balance / factor,
-                contribution: point.contribution / factor,
-                growth: point.growth / factor
+                balance: point.balance.deflated(byAnnualRate: inflationRate, overYears: years),
+                contribution: point.contribution.deflated(byAnnualRate: inflationRate, overYears: years),
+                growth: point.growth.deflated(byAnnualRate: inflationRate, overYears: years)
             )
         }
     }

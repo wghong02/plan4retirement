@@ -13,6 +13,17 @@ extension Double {
         return String(format: "%.2f%%", self)
     }
 
+    /// String for pre-filling editable text fields: whole numbers drop the trailing ".0".
+    var fieldText: String {
+        self == rounded() ? String(Int(self)) : String(self)
+    }
+
+    /// Deflates a future amount to today's dollars at an annual inflation rate (in percent).
+    func deflated(byAnnualRate percent: Double, overYears years: Double) -> Double {
+        guard percent != 0 else { return self }
+        return self / pow(1 + percent / 100.0, years)
+    }
+
     /// Compact currency label for chart axes, e.g. "$1.2M", "$45K", "$500".
     func formattedAsAxisLabel() -> String {
         if self >= 1_000_000 {
@@ -36,14 +47,6 @@ extension NumberFormatter {
     static let decimalFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
-        formatter.minimumFractionDigits = 2
-        formatter.maximumFractionDigits = 2
-        return formatter
-    }()
-
-    static let percentageFormatter: NumberFormatter = {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .percent
         formatter.minimumFractionDigits = 2
         formatter.maximumFractionDigits = 2
         return formatter

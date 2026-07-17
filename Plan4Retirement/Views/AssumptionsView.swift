@@ -180,7 +180,7 @@ struct AssumptionsView: View {
         currentAgeText = "\(settings.currentAge)"
         retirementAgeText = "\(settings.retirementAge)"
         lifeExpectancyText = "\(settings.lifeExpectancy)"
-        inflationText = formatRate(settings.inflationRate)
+        inflationText = settings.inflationRate.fieldText
         spendingText = "\(Int(settings.annualSpendingInRetirement))"
     }
 
@@ -204,11 +204,6 @@ struct AssumptionsView: View {
         if capped != text {
             text = String(capped)
         }
-    }
-
-    /// Whole numbers show without a trailing ".0".
-    private func formatRate(_ value: Double) -> String {
-        value == value.rounded() ? "\(Int(value))" : "\(value)"
     }
 
     // MARK: - Life Events

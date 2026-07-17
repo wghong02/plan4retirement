@@ -11,6 +11,9 @@ struct DataInputView: View {
     private let historyService = AccountHistoryService()
     private let snapshotService = ProjectionSnapshotService()
 
+    /// Upper bound on the number of accounts a user can add.
+    private let maxAccounts = 5
+
     /// A single item-driven sheet avoids the `.sheet(isPresented:)` race where the
     /// selected account isn't ready when the sheet content is first built.
     private enum ActiveSheet: Identifiable {
@@ -130,7 +133,7 @@ struct DataInputView: View {
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
-                    .disabled(accounts.count >= 5)
+                    .disabled(accounts.count >= maxAccounts)
                 }
                 .padding()
             }
@@ -189,7 +192,7 @@ struct DataInputView: View {
                             }
                         },
                         duplicateCheck: { balance, date, notes in
-                            isDuplicateHistory(accountId: account.id, balance: balance, date: date, notes: notes)
+                            (try? historyService.hasDuplicateEntry(accountId: account.id, balance: balance, date: date, notes: notes)) ?? false
                         }
                     )
 
@@ -222,16 +225,6 @@ struct DataInputView: View {
             lastUpdateDates = dates
         } catch {
             print("Error loading accounts: \(error)")
-        }
-    }
-
-    /// True when a history entry with the same balance, day, and note already exists.
-    private func isDuplicateHistory(accountId: String, balance: Double, date: Date, notes: String?) -> Bool {
-        let existing = (try? historyService.getHistoryForAccount(accountId: accountId)) ?? []
-        return existing.contains { entry in
-            entry.actualBalance == balance
-                && Calendar.current.isDate(entry.updateDate, inSameDayAs: date)
-                && (entry.notes ?? "") == (notes ?? "")
         }
     }
 

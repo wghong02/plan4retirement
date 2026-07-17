@@ -16,7 +16,7 @@ class AccountService {
 
     // MARK: - Read
     func getAccount(by id: String) throws -> Account? {
-        let request = AccountEntity.fetchRequest() as! NSFetchRequest<AccountEntity>
+        let request = AccountEntity.typedFetchRequest()
         request.predicate = NSPredicate(format: "id == %@", id)
 
         let results = try context.fetch(request)
@@ -24,21 +24,16 @@ class AccountService {
     }
 
     func getAllAccounts() throws -> [Account] {
-        let request = AccountEntity.fetchRequest() as! NSFetchRequest<AccountEntity>
+        let request = AccountEntity.typedFetchRequest()
         request.sortDescriptors = [NSSortDescriptor(keyPath: \AccountEntity.createdDate, ascending: true)]
 
         let results = try context.fetch(request)
         return results.map { $0.toAccount() }
     }
 
-    func getAccountCount() throws -> Int {
-        let request = AccountEntity.fetchRequest() as! NSFetchRequest<AccountEntity>
-        return try context.count(for: request)
-    }
-
     // MARK: - Update
     func updateAccount(_ account: Account) throws {
-        let request = AccountEntity.fetchRequest() as! NSFetchRequest<AccountEntity>
+        let request = AccountEntity.typedFetchRequest()
         request.predicate = NSPredicate(format: "id == %@", account.id)
 
         let results = try context.fetch(request)
@@ -61,7 +56,7 @@ class AccountService {
         let historyService = AccountHistoryService(context: context)
         guard let latest = try historyService.getLatestHistoryEntry(for: accountId) else { return }
 
-        let request = AccountEntity.fetchRequest() as! NSFetchRequest<AccountEntity>
+        let request = AccountEntity.typedFetchRequest()
         request.predicate = NSPredicate(format: "id == %@", accountId)
 
         let results = try context.fetch(request)
@@ -75,7 +70,7 @@ class AccountService {
 
     // MARK: - Delete
     func deleteAccount(by id: String) throws {
-        let request = AccountEntity.fetchRequest() as! NSFetchRequest<AccountEntity>
+        let request = AccountEntity.typedFetchRequest()
         request.predicate = NSPredicate(format: "id == %@", id)
 
         let results = try context.fetch(request)

@@ -4,7 +4,7 @@ import SwiftUI
 struct ProjectionsView: View {
     @EnvironmentObject var settings: SettingsService
     @State private var accounts: [Account] = []
-    @State private var projection: (projectionDataPoints: [ProjectionDataPoint], projectedBalance: Double)? = nil
+    @State private var projection: ProjectionResult? = nil
     @State private var parameters: ProjectionParameters? = nil
     @State private var actualSeries: [ProjectionDataPoint] = []
     @State private var savedSnapshots: [ProjectionSnapshot] = []
@@ -95,7 +95,7 @@ struct ProjectionsView: View {
         VStack(alignment: .leading, spacing: 12) {
             if let projection, let parameters {
                 RetirementLineChart(
-                    dataPoints: projection.projectionDataPoints,
+                    dataPoints: projection.dataPoints,
                     actualDataPoints: actualSeries,
                     title: "Retirement Growth Projection",
                     maxMonths: settings.maxMonthsDisplayed,
@@ -121,7 +121,7 @@ struct ProjectionsView: View {
                         Text("\(rateLabelPrefix) Avg Growth Rate")
                             .font(.subheadline)
                         Spacer()
-                        Text(periodRate(weightedRate(\.expectedROI)).formattedAsPercentage())
+                        Text(periodRate(accounts.weightedAverage(of: \.expectedROI)).formattedAsPercentage())
                             .font(.subheadline)
                     }
 
@@ -137,7 +137,7 @@ struct ProjectionsView: View {
                         Text("\(rateLabelPrefix) Avg Contribution Increase")
                             .font(.subheadline)
                         Spacer()
-                        Text(periodRate(weightedRate(\.contributionIncreaseRate)).formattedAsPercentage())
+                        Text(periodRate(accounts.weightedAverage(of: \.contributionIncreaseRate)).formattedAsPercentage())
                             .font(.subheadline)
                     }
                 }
@@ -326,20 +326,10 @@ struct ProjectionsView: View {
         settings.showInflationAdjusted ? " (today's $)" : ""
     }
 
-    /// Balance-weighted average of a per-account rate (e.g. ROI or contribution increase).
-    private func weightedRate(_ keyPath: KeyPath<Account, Double>) -> Double {
-        let total = accounts.totalBalance
-        guard total > 0 else {
-            guard !accounts.isEmpty else { return 0 }
-            return accounts.reduce(0) { $0 + $1[keyPath: keyPath] } / Double(accounts.count)
-        }
-        return accounts.reduce(0) { $0 + $1[keyPath: keyPath] * ($1.currentBalance / total) }
-    }
-
     /// Deflates a future amount to today's dollars when the setting is on.
     private func todaysDollars(_ amount: Double, yearsFromNow: Int, inflationRate: Double) -> Double {
-        guard settings.showInflationAdjusted, inflationRate != 0 else { return amount }
-        return amount / pow(1 + inflationRate / 100.0, Double(yearsFromNow))
+        guard settings.showInflationAdjusted else { return amount }
+        return amount.deflated(byAnnualRate: inflationRate, overYears: Double(yearsFromNow))
     }
 
     /// Converts an annual percentage rate to its monthly-compounding equivalent
@@ -440,7 +430,7 @@ struct ProjectionsView: View {
                 name: name,
                 projectedRetirementAge: parameters.retirementAge,
                 projectedBalance: projection.projectedBalance,
-                projectionData: projection.projectionDataPoints,
+                projectionData: projection.dataPoints,
                 parametersUsed: parameters
             )
 

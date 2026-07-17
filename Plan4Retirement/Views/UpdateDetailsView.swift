@@ -23,9 +23,9 @@ struct UpdateDetailsView: View {
         self.onSave = onSave
         _name = State(initialValue: account.name)
         _type = State(initialValue: account.type)
-        _annualContribution = State(initialValue: Self.numberString(account.annualContribution))
-        _roi = State(initialValue: Self.numberString(account.expectedROI))
-        _contributionIncrease = State(initialValue: Self.numberString(account.contributionIncreaseRate))
+        _annualContribution = State(initialValue: account.annualContribution.fieldText)
+        _roi = State(initialValue: account.expectedROI.fieldText)
+        _contributionIncrease = State(initialValue: account.contributionIncreaseRate.fieldText)
     }
 
     var body: some View {
@@ -105,11 +105,6 @@ struct UpdateDetailsView: View {
 
         onSave(updated)
         isPresented = false
-    }
-
-    /// Whole numbers show without a trailing ".0" when pre-filling.
-    private static func numberString(_ value: Double) -> String {
-        value == value.rounded() ? String(Int(value)) : String(value)
     }
 }
 

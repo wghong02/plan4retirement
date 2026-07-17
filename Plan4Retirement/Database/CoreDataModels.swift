@@ -13,7 +13,11 @@ public class AccountEntity: NSManagedObject, Identifiable {
     @NSManaged public var contributionIncreaseRate: Double
     @NSManaged public var createdDate: Date
     @NSManaged public var lastUpdatedDate: Date
-    @NSManaged public var histories: NSSet?
+
+    /// Type-safe fetch request, avoiding the `as!` cast on the inherited `fetchRequest()`.
+    static func typedFetchRequest() -> NSFetchRequest<AccountEntity> {
+        NSFetchRequest<AccountEntity>(entityName: "AccountEntity")
+    }
 
     func toAccount() -> Account {
         Account(
@@ -54,6 +58,11 @@ public class AccountHistoryEntity: NSManagedObject, Identifiable {
     @NSManaged public var updateDate: Date
     @NSManaged public var notes: String?
 
+    /// Type-safe fetch request, avoiding the `as!` cast on the inherited `fetchRequest()`.
+    static func typedFetchRequest() -> NSFetchRequest<AccountHistoryEntity> {
+        NSFetchRequest<AccountHistoryEntity>(entityName: "AccountHistoryEntity")
+    }
+
     func toAccountHistory() -> AccountHistory {
         AccountHistory(
             id: id,
@@ -87,6 +96,11 @@ public class ProjectionSnapshotEntity: NSManagedObject, Identifiable {
     @NSManaged public var projectionData: String // JSON
     @NSManaged public var parametersUsed: String // JSON
     @NSManaged public var createdDate: Date
+
+    /// Type-safe fetch request, avoiding the `as!` cast on the inherited `fetchRequest()`.
+    static func typedFetchRequest() -> NSFetchRequest<ProjectionSnapshotEntity> {
+        NSFetchRequest<ProjectionSnapshotEntity>(entityName: "ProjectionSnapshotEntity")
+    }
 
     func toProjectionSnapshot() -> ProjectionSnapshot? {
         let decoder = JSONDecoder()
@@ -140,6 +154,11 @@ public class LifeEventEntity: NSManagedObject, Identifiable {
     @NSManaged public var eventDate: Date
     @NSManaged public var amount: Double
     @NSManaged public var notes: String?
+
+    /// Type-safe fetch request, avoiding the `as!` cast on the inherited `fetchRequest()`.
+    static func typedFetchRequest() -> NSFetchRequest<LifeEventEntity> {
+        NSFetchRequest<LifeEventEntity>(entityName: "LifeEventEntity")
+    }
 
     func toLifeEvent() -> LifeEvent {
         LifeEvent(

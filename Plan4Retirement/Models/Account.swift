@@ -72,4 +72,15 @@ extension Array where Element == Account {
     var totalBalance: Double {
         reduce(0) { $0 + $1.currentBalance }
     }
+
+    /// Balance-weighted average of a per-account rate (e.g. ROI or contribution
+    /// increase). Falls back to a simple average when the total balance is zero.
+    func weightedAverage(of rate: KeyPath<Account, Double>) -> Double {
+        guard !isEmpty else { return 0 }
+        let total = totalBalance
+        guard total > 0 else {
+            return reduce(0) { $0 + $1[keyPath: rate] } / Double(count)
+        }
+        return reduce(0) { $0 + $1[keyPath: rate] * ($1.currentBalance / total) }
+    }
 }

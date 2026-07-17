@@ -90,12 +90,7 @@ struct AccountHistoryView: View {
                         editingEntry = nil
                     } : nil,
                     duplicateCheck: { balance, date, notes in
-                        history.contains { other in
-                            other.id != entry.id
-                                && other.actualBalance == balance
-                                && Calendar.current.isDate(other.updateDate, inSameDayAs: date)
-                                && (other.notes ?? "") == (notes ?? "")
-                        }
+                        (try? historyService.hasDuplicateEntry(accountId: account.id, balance: balance, date: date, notes: notes, excludingId: entry.id)) ?? false
                     }
                 )
             }
