@@ -258,25 +258,27 @@ struct RetirementLineChart: View {
             let balanceRange = max(1, maxBalance - minBalance)
             let monthSpan = max(1, range.max - range.min)
             let chartWidth = size.width - (padding * 2)
-            let chartHeight = size.height - (padding * 1.5)
+            // Extra room under the x-axis for the 45°-tilted month/year labels.
+            let bottomInset: CGFloat = 44
+            let chartHeight = size.height - padding - bottomInset
 
             func xFor(_ monthIndex: Int) -> CGFloat {
                 padding + CGFloat(monthIndex - range.min) / CGFloat(monthSpan) * chartWidth
             }
             func yFor(_ balance: Double) -> CGFloat {
                 let norm = (balance - minBalance) / balanceRange
-                return size.height - padding / 2 - norm * chartHeight
+                return size.height - bottomInset - norm * chartHeight
             }
 
             // Axes
             var yPath = Path()
             yPath.move(to: CGPoint(x: padding, y: padding))
-            yPath.addLine(to: CGPoint(x: padding, y: size.height - padding / 2))
+            yPath.addLine(to: CGPoint(x: padding, y: size.height - bottomInset))
             context.stroke(yPath, with: .color(.gray), lineWidth: 1)
 
             var xPath = Path()
-            xPath.move(to: CGPoint(x: padding, y: size.height - padding / 2))
-            xPath.addLine(to: CGPoint(x: size.width - padding, y: size.height - padding / 2))
+            xPath.move(to: CGPoint(x: padding, y: size.height - bottomInset))
+            xPath.addLine(to: CGPoint(x: size.width - padding, y: size.height - bottomInset))
             context.stroke(xPath, with: .color(.gray), lineWidth: 1)
 
             // Grid + Y labels
@@ -292,7 +294,8 @@ struct RetirementLineChart: View {
                 let text = Text(balance.formattedAsAxisLabel())
                     .font(.caption2)
                     .foregroundColor(.gray)
-                context.draw(text, at: CGPoint(x: padding - 40, y: y), anchor: .center)
+                // Right-align snug to the axis so the leading "$" never clips off the edge.
+                context.draw(text, at: CGPoint(x: padding - 6, y: y), anchor: .trailing)
             }
 
             // Zero baseline when the visible balances cross zero, so a depleted
@@ -310,7 +313,7 @@ struct RetirementLineChart: View {
                 let x0 = xFor(0)
                 var todayPath = Path()
                 todayPath.move(to: CGPoint(x: x0, y: padding))
-                todayPath.addLine(to: CGPoint(x: x0, y: size.height - padding / 2))
+                todayPath.addLine(to: CGPoint(x: x0, y: size.height - bottomInset))
                 context.stroke(todayPath, with: .color(.gray.opacity(0.5)), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
             }
 
@@ -340,14 +343,20 @@ struct RetirementLineChart: View {
             draw(actual, color: .green)
             draw(projected, color: .blue)
 
-            // X labels
+            // X labels, tilted 45° so longer "MMM YY" labels don't crowd each other.
             let step = max(1, monthSpan / 6)
+            let labelBaseline = size.height - bottomInset + 6
             for monthIndex in stride(from: range.min, through: range.max, by: step) {
                 let x = xFor(monthIndex)
                 let text = Text(verbatim: xAxisLabel(monthIndex: monthIndex))
                     .font(.caption2)
                     .foregroundColor(.gray)
-                context.draw(text, at: CGPoint(x: x, y: size.height - 20), anchor: .center)
+                // Copy the context so the rotation applies only to this label; the
+                // label's top-right corner is pinned at the tick and it hangs down-left.
+                var labelContext = context
+                labelContext.translateBy(x: x, y: labelBaseline)
+                labelContext.rotate(by: .degrees(-45))
+                labelContext.draw(text, at: .zero, anchor: .topTrailing)
             }
         }
     }
