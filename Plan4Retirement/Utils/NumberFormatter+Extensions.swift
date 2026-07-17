@@ -24,14 +24,16 @@ extension Double {
         return self / pow(1 + percent / 100.0, years)
     }
 
-    /// Compact currency label for chart axes, e.g. "$1.2M", "$45K", "$500".
+    /// Compact currency label for chart axes, e.g. "$1.2M", "$45K", "$500", "-$45K".
     func formattedAsAxisLabel() -> String {
-        if self >= 1_000_000 {
-            return String(format: "$%.1fM", self / 1_000_000)
-        } else if self >= 1_000 {
-            return String(format: "$%.0fK", self / 1_000)
+        let sign = self < 0 ? "-" : ""
+        let magnitude = abs(self)
+        if magnitude >= 1_000_000 {
+            return String(format: "%@$%.1fM", sign, magnitude / 1_000_000)
+        } else if magnitude >= 1_000 {
+            return String(format: "%@$%.0fK", sign, magnitude / 1_000)
         } else {
-            return "$\(Int(self))"
+            return "\(sign)$\(Int(magnitude))"
         }
     }
 }

@@ -295,6 +295,16 @@ struct RetirementLineChart: View {
                 context.draw(text, at: CGPoint(x: padding - 40, y: y), anchor: .center)
             }
 
+            // Zero baseline when the visible balances cross zero, so a depleted
+            // (negative) portfolio reads clearly against it.
+            if minBalance < 0 && maxBalance > 0 {
+                let yZero = yFor(0)
+                var zeroPath = Path()
+                zeroPath.move(to: CGPoint(x: padding, y: yZero))
+                zeroPath.addLine(to: CGPoint(x: size.width - padding, y: yZero))
+                context.stroke(zeroPath, with: .color(.red.opacity(0.4)), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+            }
+
             // "Today" marker when there is past history to the left
             if range.min < 0 && range.max >= 0 {
                 let x0 = xFor(0)

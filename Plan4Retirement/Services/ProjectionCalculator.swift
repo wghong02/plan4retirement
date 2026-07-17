@@ -98,9 +98,9 @@ class ProjectionCalculator {
                     }
                 }
 
-                for i in balances.indices {
-                    balances[i] = max(0, balances[i])
-                }
+                // Balances are intentionally not floored at zero: when spending, loan
+                // payments, or events outpace assets, the projection is allowed to go
+                // negative so the portfolio's depletion is visible.
 
                 dataPoints.append(ProjectionDataPoint(
                     monthIndex: month,
