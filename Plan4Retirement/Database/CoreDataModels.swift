@@ -154,6 +154,10 @@ public class LifeEventEntity: NSManagedObject, Identifiable {
     @NSManaged public var eventDate: Date
     @NSManaged public var amount: Double
     @NSManaged public var notes: String?
+    @NSManaged public var isLoan: Bool
+    @NSManaged public var loanAmount: Double
+    @NSManaged public var loanRate: Double
+    @NSManaged public var loanTermMonths: Int32
 
     /// Type-safe fetch request, avoiding the `as!` cast on the inherited `fetchRequest()`.
     static func typedFetchRequest() -> NSFetchRequest<LifeEventEntity> {
@@ -167,7 +171,11 @@ public class LifeEventEntity: NSManagedObject, Identifiable {
             type: LifeEventType(rawValue: type) ?? .other,
             eventDate: eventDate,
             amount: amount,
-            notes: notes
+            notes: notes,
+            isLoan: isLoan,
+            loanAmount: loanAmount,
+            loanRate: loanRate,
+            loanTermMonths: Int(loanTermMonths)
         )
     }
 
@@ -179,6 +187,10 @@ public class LifeEventEntity: NSManagedObject, Identifiable {
         entity.eventDate = event.eventDate
         entity.amount = event.amount
         entity.notes = event.notes
+        entity.isLoan = event.isLoan
+        entity.loanAmount = event.loanAmount
+        entity.loanRate = event.loanRate
+        entity.loanTermMonths = Int32(event.loanTermMonths)
         return entity
     }
 }

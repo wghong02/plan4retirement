@@ -33,6 +33,10 @@ class ProjectionCalculator {
         let lifeHorizon = max(0, parameters.lifeExpectancy - parameters.currentAge) * 12
         let totalMonths = max(lifeHorizon, horizonMonths ?? 0)
 
+        // Resolve each event's month offset (and loan payment) once, rather than
+        // re-deriving it from `Date()` on every month of the loop.
+        let scheduledEvents = schedule(parameters.lifeEvents)
+
         // Month 0 is the starting point: exactly the current balance, with no growth
         // or contribution applied yet.
         dataPoints.append(ProjectionDataPoint(
@@ -72,15 +76,25 @@ class ProjectionCalculator {
                     allocate(-spending, across: &balances)
                 }
 
-                // One-off life events for this month, allocated across accounts by balance.
-                for event in lifeEvents(parameters.lifeEvents, inMonth: month) {
-                    switch event.type {
-                    case .housePurchase, .carPurchase, .majorExpense, .medicalExpense:
-                        allocate(-event.amount, across: &balances)
-                    case .inheritance:
-                        allocate(event.amount, across: &balances)
-                    case .other:
-                        break
+                // Life events: the one-off impact lands at the event month (the full
+                // cost, or just the down payment when financed), and a financed event
+                // additionally draws its amortized payment each month over the term.
+                for scheduled in scheduledEvents {
+                    if scheduled.month == month {
+                        switch scheduled.event.type {
+                        case .housePurchase, .carPurchase, .majorExpense, .medicalExpense:
+                            allocate(-scheduled.event.amount, across: &balances)
+                        case .inheritance:
+                            allocate(scheduled.event.amount, across: &balances)
+                        case .other:
+                            break
+                        }
+                    }
+
+                    if scheduled.event.isLoan,
+                       month > scheduled.month,
+                       month <= scheduled.month + scheduled.event.loanTermMonths {
+                        allocate(-scheduled.monthlyPayment, across: &balances)
                     }
                 }
 
@@ -140,11 +154,22 @@ class ProjectionCalculator {
     }
 
     // MARK: - Helper Methods
-    /// Life events whose date falls `month` months from today.
-    private func lifeEvents(_ events: [LifeEvent], inMonth month: Int) -> [LifeEvent] {
-        events.filter { event in
-            let monthsFromNow = Calendar.current.dateComponents([.month], from: Date(), to: event.eventDate).month ?? -1
-            return monthsFromNow == month
+    /// A life event resolved to a month offset from today, with its loan payment
+    /// precomputed so the projection loop stays a simple lookup.
+    private struct ScheduledEvent {
+        let month: Int
+        let event: LifeEvent
+        let monthlyPayment: Double
+    }
+
+    /// Resolves each event's month offset (0 = this month, negative = past) and,
+    /// for financed events, its fixed monthly payment. Computed once per projection.
+    private func schedule(_ events: [LifeEvent]) -> [ScheduledEvent] {
+        let now = Date()
+        let calendar = Calendar.current
+        return events.map { event in
+            let month = calendar.dateComponents([.month], from: now, to: event.eventDate).month ?? -1
+            return ScheduledEvent(month: month, event: event, monthlyPayment: event.monthlyLoanPayment)
         }
     }
 }

@@ -95,13 +95,26 @@ struct AssumptionsView: View {
 
                                     Spacer()
 
-                                    Text(event.amount.formatted(as: true))
-                                        .font(.headline)
+                                    VStack(alignment: .trailing, spacing: 2) {
+                                        Text(event.amount.formatted(as: true))
+                                            .font(.headline)
+                                        if event.isLoan {
+                                            Text("down payment")
+                                                .font(.caption2)
+                                                .foregroundColor(.gray)
+                                        }
+                                    }
                                 }
 
                                 Text(event.eventDate.formatted(date: .abbreviated, time: .omitted))
                                     .font(.subheadline)
                                     .foregroundColor(.gray)
+
+                                if event.isLoan {
+                                    Text("Loan • \(event.loanAmount.formatted(as: true)) at \(event.loanRate.formattedAsPercentage()) for \(event.loanTermMonths) mo · \(event.monthlyLoanPayment.formatted(as: true))/mo")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                }
 
                                 if let notes = event.notes {
                                     Text(notes)
